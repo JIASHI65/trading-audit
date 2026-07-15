@@ -234,6 +234,8 @@ switch (action) {
       var p = JSON.parse(localStorage.getItem('app_prompts'));
       if (p) this.state.prompts = p;
     } catch(e) {}
+    // 确保订阅者（如 prompt.js 的 renderPromptCards）收到 init 后的首次通知
+    this._notify('prompts');
 
     // 检查是否有旧版数据需要迁移
     const hasNew = Object.keys(this.state.models).length > 0;
