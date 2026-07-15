@@ -95,5 +95,6 @@
     Store.state.subscribers.push({key: "currentLane", fn: renderPromptCards});
     Store.state.subscribers.push({key: "prompts", fn: renderPromptCards});
   }
-  // 不再立即执行——改为由 App.init() 结束后统一触发
+  // 立即渲染（此时 Store 已由 App.init 初始化完成）
+  renderPromptCards();
 })();
