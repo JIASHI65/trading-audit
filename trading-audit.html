@@ -348,6 +348,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helveti
 </div>
 
 <script>
+window.onerror = function(msg, url, line) {
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f85149;color:#fff;padding:10px;z-index:99999;font-size:12px;font-family:monospace';
+  d.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ')';
+  document.body.appendChild(d);
+  console.error('JS ERROR:', msg, 'at', url, 'line', line);
+};
 // ============================================================
 // 交易审计台 v3 — audit.js
 // 模块: Store → Parser → Auditor → Renderer → Snapshot → App
@@ -430,7 +437,7 @@ const Store = {
     }
     // 迁移追踪: tradeflow_tracker
     try {
-      const oldTracker = localStorage.getItem('tradeflow_tracker');
+      const oldTracker = localStorage.getItem('app_tracker');
       if (oldTracker) {
         const parsed = JSON.parse(oldTracker);
         if (Array.isArray(parsed)) migrated.tracker = parsed;
@@ -568,10 +575,20 @@ switch (action) {
         this._notify('snapshot');
         break;
       }
+      default: {
+        console.warn('handleAction: unknown action', action);
+        break;
+      }
     }
   },
 
   init() {
+      // 清理之前的定时器，防止堆积
+      if (window._auditTimers) {
+        window._auditTimers.forEach(function(t) { clearInterval(t); clearTimeout(t); });
+      }
+      window._auditTimers = [];
+
     // 加载新格式数据
     this.state.models = this._load('models', {});
     this.state.confirms = this._load('confirms', {});
@@ -1912,11 +1929,8 @@ const App = {
 
     // 直接绑定提示词按钮（不依赖事件委托）
     var promptBtn = document.getElementById('promptBtn');
-    if (promptBtn) {
-      promptBtn.addEventListener('click', function() {
-        if (typeof App._openPromptManager === 'function') App._openPromptManager();
-      });
-    }
+    
+
     var testBtn = document.querySelector('[data-action="testBtn"]');
     if (testBtn) {
       testBtn.addEventListener('click', function() {
@@ -1937,14 +1951,14 @@ const App = {
     });
 
     // 2分钟自动刷新行情
-    Store.state.pendingSnapshotTimer = setInterval(() => Snapshot.loadMarketSnapshot(), 120000);
+    Store.state.pendingSnapshotTimer = setInterval(() => Snapshot.loadMarketSnapshot(), 120000); window._auditTimers.push(Store.state.pendingSnapshotTimer);
 
     // [FIX Bug 5] 不再30秒自动刷新追踪（通过subscribe机制在数据变化时刷新）
     // 保留定时器仅用于检查外部数据变化
-    Store.state.pendingTrackerTimer = setInterval(() => {
+    Store.state.pendingTrackerTimer = (_t_trk = setInterval(() => {
       const t = document.querySelector('.tab-content.active');
       if (t && t.id === 'tab-tracker') Renderer.renderTracker();
-    }, 30000);
+    }, 30000)) && window._auditTimers.push(_t_trk);
 
     // 初始化 UI
     this.restoreUI();
@@ -2131,6 +2145,7 @@ switch (action) {
           this._refreshPromptVersions();
         }
         break;
+      }
       case 'editPrompt': {
         var idx = parseInt(target.dataset.idx);
         if (isNaN(idx)) return;
@@ -2152,7 +2167,6 @@ switch (action) {
         Store.deletePrompt(Store.state.currentLane, idx);
         break;
       }
-            }
       case 'loadPromptVersion2': {
         var lane = Store.state.currentLane;
         var prompts = Store.getPrompts(lane);
@@ -2391,7 +2405,7 @@ switch (action) {
         div.id = 'promptModalPrompt';
         div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
         var labels = { stream_us: '\ud83c\uddfa\ud83c\uddf8\u7f8e\u80a1', stream_a: '\ud83c\udde8\ud83c\uddf3A\u80a1', stream_hk: '\ud83c\udded\ud83c\uddf0\u6e2f\u80a1', stream_crypto: '\ud83e\ude99\u52a0\u5bc6\u73b0\u8d27' };
-        var html = '<div style="background:#1a2332;border:1px solid #283040;border-radius:12px;padding:20px;color:#e4e8ef;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)" data-action="promptModalBox">' +
+        var html = '<div style="background:#1a2332;border:1px solid #283040;border-radius:12px;padding:20px;color:#e4e8ef;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)" data-action="closePromptManager">' +
           '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid #283040;padding-bottom:10px">' +
           '<h2 style="font-size:15px;font-weight:700;margin:0">\ud83d\udccb ' + (labels[lane] || lane) + ' \u63d0\u793a\u8bcd\u5e93</h2>' +
           '<span data-action="closePromptManager2" style="cursor:pointer;color:#8895a8;font-size:18px">&times;</span></div>' +
@@ -2696,8 +2710,10 @@ document.addEventListener('DOMContentLoaded', () => {
         + '</div>';
     }
     cardList.innerHTML = h;
-    // 绑定折叠展开
+    // 绑定折叠展开（防止重复绑定）
     cardList.querySelectorAll('.prompt-toggle').forEach(function(el) {
+      if (el._promptBound) return;
+      el._promptBound = true;
       el.addEventListener('click', function(e) {
         var card = el.closest('.prompt-card');
         var preview = card.querySelector('.prompt-preview');
