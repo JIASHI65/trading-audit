@@ -17,6 +17,14 @@
   function closeEditor() { editorModal.style.display = "none"; }
   function renderPromptCards() {
     if (!window.Store) return;
+    // 确保 prompts 已从 localStorage 加载
+    try {
+      var raw = localStorage.getItem('app_prompts');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed) Store.state.prompts = parsed;
+      }
+    } catch(e) {}
     var lane = Store.state.currentLane;
     var prompts = Store.getPrompts(lane);
     if (!prompts || prompts.length === 0) {
