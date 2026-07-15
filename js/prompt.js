@@ -103,6 +103,11 @@
     Store.state.subscribers.push({key: "currentLane", fn: renderPromptCards});
     Store.state.subscribers.push({key: "prompts", fn: renderPromptCards});
   }
-  // 立即渲染（此时 Store 已由 App.init 初始化完成）
+  // 首次渲染：双重保险
+  // 1. 立即尝试（如果 Store 已经就绪）
   renderPromptCards();
+  // 2. DOMContentLoaded 后再跑一次
+  document.addEventListener('DOMContentLoaded', function() { renderPromptCards(); });
+  // 3. 1秒后最后再跑一次（兜底）
+  setTimeout(renderPromptCards, 1000);
 })();
