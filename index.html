@@ -2153,11 +2153,17 @@ switch (action) {
         var prompts = Store.getPrompts(lane);
         if (!prompts || idx < 0 || idx >= prompts.length) return;
         var p = prompts[idx];
-        editorTitle.textContent = "\u270f\ufe0f \u7f16\u8f91\u63d0\u793a\u8bcd";
-        editorVersion.value = p.version || "";
-        editorContent.value = p.content || "";
-        editorSave.dataset.editIdx = idx;
-        editorModal.style.display = "flex";
+        var _et = document.getElementById("promptEditorTitle");
+        var _ev = document.getElementById("promptEditorVersion");
+        var _ec = document.getElementById("promptEditorContent");
+        var _es = document.getElementById("promptEditorSave");
+        var _em = document.getElementById("promptEditorModal");
+        if (!_et || !_em) return;
+        _et.textContent = "\u270f\ufe0f \u7f16\u8f91\u63d0\u793a\u8bcd";
+        _ev.value = p.version || "";
+        _ec.value = p.content || "";
+        _es.dataset.editIdx = idx;
+        _em.style.display = "flex";
         break;
       }
       case 'deletePrompt': {
