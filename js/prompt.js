@@ -88,9 +88,12 @@
     closeEditor();
   });
 
+  // 暴露给外部（App.init 需要调用）
+  window.renderPromptCards = renderPromptCards;
+
   if (window.Store) {
     Store.state.subscribers.push({key: "currentLane", fn: renderPromptCards});
     Store.state.subscribers.push({key: "prompts", fn: renderPromptCards});
   }
-  renderPromptCards();
+  // 不再立即执行——改为由 App.init() 结束后统一触发
 })();
