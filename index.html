@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>交易审计台 v3.1</title>
+<title>交易审计台 v3</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0e14;--surface:#121821;--surface2:#1a2332;--border:#283040;--border-light:#354050;--text:#e4e8ef;--text-dim:#8895a8;--text-muted:#556070;--accent:#58a6ff;--green:#3fb950;--orange:#d29922;--pink:#f778ba;--red:#f85149;--purple:#bc8cff;--cyan:#39d2c0;--glow:0 0 20px rgba(88,166,255,.08)}
@@ -2147,7 +2147,7 @@ switch (action) {
         break;
       }
       case 'editPrompt': {
-        var idx = parseInt(target.dataset.idx);
+        var idx = parseInt(ctx.target.dataset.idx);
         if (isNaN(idx)) return;
         var lane = Store.state.currentLane;
         var prompts = Store.getPrompts(lane);
@@ -2161,7 +2161,7 @@ switch (action) {
         break;
       }
       case 'deletePrompt': {
-        var idx = parseInt(target.dataset.idx);
+        var idx = parseInt(ctx.target.dataset.idx);
         if (isNaN(idx)) return;
         if (!confirm("\u786e\u5b9a\u5220\u9664\u8fd9\u4e2a\u7248\u672c\u5417\uff1f")) return;
         Store.deletePrompt(Store.state.currentLane, idx);
@@ -2170,7 +2170,7 @@ switch (action) {
       case 'loadPromptVersion2': {
         var lane = Store.state.currentLane;
         var prompts = Store.getPrompts(lane);
-        var idx = prompts.length - parseInt(ctx.target.dataset.version);
+        var idx = parseInt(ctx.target.dataset.version) - 1;
         if (prompts[idx]) {
           var ta = document.getElementById('promptContent');
           if (ta) ta.value = prompts[idx].content;
@@ -2464,7 +2464,7 @@ switch (action) {
   _loadPromptVersion(versionIdx) {
     var lane = Store.state.currentLane;
     var prompts = Store.getPrompts(lane);
-    var idx = prompts.length - parseInt(versionIdx);
+    var idx = parseInt(versionIdx) - 1;
     if (!prompts[idx]) return;
     var ta = document.getElementById('promptContent');
     if (ta) ta.value = prompts[idx].content;
