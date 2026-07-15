@@ -289,6 +289,8 @@ const App = {
       const t = document.querySelector('.tab-content.active');
       if (t && t.id === 'tab-tracker') Renderer.renderTracker();
     });
+    // 刷新提示词卡片（确保 Store.init 已完成）
+    if (typeof renderPromptCards === 'function') renderPromptCards();
     } catch(e) {
       var errDiv = document.createElement('div');
       errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#f85149;color:#fff;padding:10px;font-size:13px;z-index:999999;text-align:center';
