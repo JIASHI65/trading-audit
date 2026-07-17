@@ -240,18 +240,12 @@ const App = {
       this.handleAction(action, {modelId, filter, idx, value, tab, key, target});
     });
 
-    // 直接绑定提示词按钮（不依赖事件委托）
+    // 直接绑定提示词按钮：滚动到底部提示词卡片区
     var promptBtn = document.getElementById('promptBtn');
-    
-
-    var testBtn = document.querySelector('[data-action="testBtn"]');
-    if (testBtn) {
-      testBtn.addEventListener('click', function() {
-        var box = document.createElement('div');
-        box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;font-size:32px;padding:40px;border-radius:16px;z-index:999999';
-        box.textContent = '✅ 直接绑定了!';
-        document.body.appendChild(box);
-        setTimeout(function() { box.remove(); }, 3000);
+    if (promptBtn) {
+      promptBtn.addEventListener('click', function() {
+        var sec = document.getElementById('promptSection');
+        if (sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
       });
     }
     // 选中复选框的委托
@@ -301,16 +295,7 @@ const App = {
   handleAction(action, ctx) {
     const s = Store.state;
 
-    // 调试：将 action 写入页面
-    var dbg = document.getElementById('debugAction');
-    if (!dbg) {
-      dbg = document.createElement('div');
-      dbg.id = 'debugAction';
-      dbg.style.cssText = 'position:fixed;bottom:10px;left:10px;background:#000;color:#0f0;padding:4px 8px;font-size:12px;font-family:monospace;z-index:99999;border-radius:4px';
-      document.body.appendChild(dbg);
-    }
-    dbg.textContent = 'action: ' + action;
-switch (action) {
+    switch (action) {
       // ----- 模型切换 -----
       case 'loadModel': {
         if (ctx.modelId) {
@@ -422,92 +407,6 @@ switch (action) {
         break;
       }
 
-      case 'openPromptManager': {
-        this._openPromptManager();
-        break;
-      }
-
-      case 'closePromptManager': {
-        var m = document.getElementById('promptModal');
-        if (m) m.remove();
-        break;
-      }
-
-      case 'savePrompt': {
-        this._saveCurrentPrompt();
-        break;
-      }
-
-      case 'loadPromptVersion': {
-        this._loadPromptVersion(ctx.target.dataset.version);
-        break;
-      }
-
-      case 'closePromptManager2': {
-        var m = document.getElementById('promptModalPrompt');
-        if (m) m.style.display = 'none';
-        break;
-      }
-      case 'savePrompt2': {
-        var content = document.getElementById('promptContent');
-        var version = document.getElementById('promptVersion');
-        if (content && content.value.trim()) {
-          Store.savePrompts(Store.state.currentLane, version.value.trim() || '未命名', content.value);
-          content.value = '';
-          if (version) version.value = '';
-          this._refreshPromptVersions();
-        }
-        break;
-      }
-      case 'editPrompt': {
-        var idx = parseInt(ctx.target.dataset.idx);
-        if (isNaN(idx)) return;
-        var lane = Store.state.currentLane;
-        var prompts = Store.getPrompts(lane);
-        if (!prompts || idx < 0 || idx >= prompts.length) return;
-        var p = prompts[idx];
-        var _et = document.getElementById("promptEditorTitle");
-        var _ev = document.getElementById("promptEditorVersion");
-        var _ec = document.getElementById("promptEditorContent");
-        var _es = document.getElementById("promptEditorSave");
-        var _em = document.getElementById("promptEditorModal");
-        if (!_et || !_em) return;
-        _et.textContent = "\u270f\ufe0f \u7f16\u8f91\u63d0\u793a\u8bcd";
-        _ev.value = p.version || "";
-        _ec.value = p.content || "";
-        _es.dataset.editIdx = idx;
-        _em.style.display = "flex";
-        break;
-      }
-      case 'deletePrompt': {
-        var idx = parseInt(ctx.target.dataset.idx);
-        if (isNaN(idx)) return;
-        if (!confirm("\u786e\u5b9a\u5220\u9664\u8fd9\u4e2a\u7248\u672c\u5417\uff1f")) return;
-        Store.deletePrompt(Store.state.currentLane, idx);
-        break;
-      }
-      case 'loadPromptVersion2': {
-        var lane = Store.state.currentLane;
-        var prompts = Store.getPrompts(lane);
-        var idx = parseInt(ctx.target.dataset.version) - 1;
-        if (prompts[idx]) {
-          var ta = document.getElementById('promptContent');
-          if (ta) ta.value = prompts[idx].content;
-        }
-        break;
-      }
-      case 'testBtn': {
-        var box = document.getElementById('testResultBox');
-        if (!box) {
-          box = document.createElement('div');
-          box.id = 'testResultBox';
-          box.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:red;color:white;font-size:32px;padding:40px;border-radius:16px;z-index:999999';
-          box.textContent = '✅ 事件委托正常!';
-          document.body.appendChild(box);
-          setTimeout(function() { box.remove(); }, 3000);
-        }
-        break;
-      }
       case 'switchTab': {
         if (ctx.tab) {
           document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -716,79 +615,6 @@ switch (action) {
     }
   },
 
-  _openPromptManager() {
-      if (!Store.state.prompts) Store.state.prompts = {};
-      var lane = Store.state.currentLane;
-      if (!document.getElementById('promptModalPrompt')) {
-        var div = document.createElement('div');
-        div.id = 'promptModalPrompt';
-        div.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
-        var labels = { stream_us: '\ud83c\uddfa\ud83c\uddf8\u7f8e\u80a1', stream_a: '\ud83c\udde8\ud83c\uddf3A\u80a1', stream_hk: '\ud83c\udded\ud83c\uddf0\u6e2f\u80a1', stream_crypto: '\ud83e\ude99\u52a0\u5bc6\u73b0\u8d27' };
-        var html = '<div style="background:#1a2332;border:1px solid #283040;border-radius:12px;padding:20px;color:#e4e8ef;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)" data-action="closePromptManager">' +
-          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;border-bottom:1px solid #283040;padding-bottom:10px">' +
-          '<h2 style="font-size:15px;font-weight:700;margin:0">\ud83d\udccb ' + (labels[lane] || lane) + ' \u63d0\u793a\u8bcd\u5e93</h2>' +
-          '<span data-action="closePromptManager2" style="cursor:pointer;color:#8895a8;font-size:18px">&times;</span></div>' +
-          '<div id="promptModalVersionList" style="margin-bottom:12px;font-size:12px;color:#8895a8"></div>' +
-          '<div style="border-top:1px solid #283040;padding-top:12px">' +
-          '<h3 style="font-size:13px;margin:0 0 8px;color:#8895a8">\u4fdd\u5b58\u5f53\u524d\u63d0\u793a\u8bcd</h3>' +
-          '<textarea id="promptContent" style="width:100%;min-height:100px;background:#0a0e14;border:1px solid #283040;border-radius:8px;color:#e4e8ef;padding:10px;font-size:12px;font-family:monospace;resize:vertical" placeholder="\u7c98\u8d34\u5f53\u524d\u8d5b\u9053\u4f7f\u7528\u7684\u63d0\u793a\u8bcd..."></textarea>' +
-          '<div style="margin-top:8px;display:flex;gap:6px">' +
-          '<input id="promptVersion" style="flex:1;background:#0a0e14;border:1px solid #283040;border-radius:6px;padding:6px 10px;color:#e4e8ef;font-size:12px;outline:none" placeholder="\u7248\u672c\u53f7 e.g. v5.3">' +
-          '<button data-action="savePrompt2" style="background:#58a6ff;border:none;border-radius:6px;padding:6px 14px;color:#fff;cursor:pointer;font-size:12px;font-weight:600">\ud83d\udcbe \u4fdd\u5b58</button></div></div></div>';
-        div.innerHTML = html;
-        document.body.appendChild(div);
-        // 刷新版本列表
-        this._refreshPromptVersions();
-      }
-      document.getElementById('promptModalPrompt').style.display = 'flex';
-  },
-
-  _refreshPromptVersions() {
-    try {
-      if (!Store.state.prompts) Store.state.prompts = {};
-      var list = document.getElementById('promptModalVersionList');
-      if (!list) return;
-      var lane = Store.state.currentLane;
-      var prompts = Store.getPrompts(lane);
-      if (prompts.length === 0) {
-        list.innerHTML = '<p style="color:#556070;font-size:12px;text-align:center;padding:10px 0">\u6682\u65e0\u5386\u53f2\u7248\u672c</p>';
-      } else {
-        var html = '<ul style="list-style:none;padding:0;margin:0">';
-        for (var i = prompts.length - 1; i >= 0; i--) {
-          var p = prompts[i];
-          var vNum = i + 1;
-          html += '<li style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #283040;font-size:12px;cursor:pointer" data-action="loadPromptVersion2" data-version="' + vNum + '">' +
-            '<span><span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(88,166,255,.12);color:#58a6ff">v' + vNum + '</span> ' +
-            '<span style="color:#e4e8ef">' + (p.version || '\u672a\u547d\u540d') + '</span></span>' +
-            '<span style="color:#8895a8;font-size:10px">' + p.date + '</span></li>';
-        }
-        html += '</ul>';
-        list.innerHTML = html;
-      }
-    } catch(e) {}
-  },
-  _saveCurrentPrompt() {
-    var content = document.getElementById('promptContent');
-    var version = document.getElementById('promptVersion');
-    if (!content || !content.value.trim()) return;
-    var lane = Store.state.currentLane;
-    Store.savePrompts(lane, version.value.trim() || '未命名', content.value);
-    content.value = '';
-    if (version) version.value = '';
-    var m = document.getElementById('promptModal');
-    if (m) m.remove();
-    this._openPromptManager();
-  },
-
-  _loadPromptVersion(versionIdx) {
-    var lane = Store.state.currentLane;
-    var prompts = Store.getPrompts(lane);
-    var idx = parseInt(versionIdx) - 1;
-    if (!prompts[idx]) return;
-    var ta = document.getElementById('promptContent');
-    if (ta) ta.value = prompts[idx].content;
-  },
-
   // ============================================================
   // 示例数据
   // ============================================================
@@ -933,18 +759,16 @@ switch (action) {
 window.Store = Store;
 window.ModelKeys = MODEL_KEYS;
 window.openPromptManager = function() {
-  try { App._openPromptManager(); } catch(e) { console.error(e); }
+  var sec = document.getElementById('promptSection');
+  if (sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
 };
 
 document.addEventListener('DOMContentLoaded', () => {
   App.init();
-  // 直接绑定提示词按钮
   var btn = document.getElementById('promptBtn');
   if (btn) {
     btn.addEventListener('click', function() {
-      if (typeof App._openPromptManager === 'function') {
-        App._openPromptManager();
-      }
+      window.openPromptManager();
     });
   }
 });

@@ -93,16 +93,7 @@ const Store = {
 
   dispatch(action, payload) {
     const s = this.state;
-    // 调试：将 action 写入页面
-    var dbg = document.getElementById('debugAction');
-    if (!dbg) {
-      dbg = document.createElement('div');
-      dbg.id = 'debugAction';
-      dbg.style.cssText = 'position:fixed;bottom:10px;left:10px;background:#000;color:#0f0;padding:4px 8px;font-size:12px;font-family:monospace;z-index:99999;border-radius:4px';
-      document.body.appendChild(dbg);
-    }
-    dbg.textContent = 'action: ' + action;
-switch (action) {
+    switch (action) {
       case 'SET_MODEL': {
         s.activeModel = payload;
         s.filter = 'all';
@@ -132,7 +123,7 @@ switch (action) {
       case 'CLEAR_MODEL': {
         const id = payload;
         delete s.models[id];
-        this._save('models', s.models);
+        this._save(s.currentLane + '_models', s.models);
         this._notify('models');
         break;
       }
@@ -140,7 +131,7 @@ switch (action) {
         const {key, value} = payload; // key = "modelId_idx", value = true/false/null
         if (value === null) delete s.confirms[key];
         else s.confirms[key] = value;
-        this._save('confirms', s.confirms);
+        this._save(s.currentLane + '_confirms', s.confirms);
         this._notify('confirms');
         break;
       }
@@ -177,7 +168,7 @@ switch (action) {
           else s.confirms[k] = value;
         });
         s.selected = new Set();
-        this._save('confirms', s.confirms);
+        this._save(s.currentLane + '_confirms', s.confirms);
         this._notify('confirms');
         this._notify('selected');
         break;
@@ -189,19 +180,19 @@ switch (action) {
             s.tracker.push({...item, tracked_at: new Date().toISOString()});
           }
         });
-        this._save('tracker', s.tracker);
+        this._save(s.currentLane + '_tracker', s.tracker);
         this._notify('tracker');
         break;
       }
       case 'REMOVE_TRACKER': {
         s.tracker = s.tracker.filter(t => t.id !== payload);
-        this._save('tracker', s.tracker);
+        this._save(s.currentLane + '_tracker', s.tracker);
         this._notify('tracker');
         break;
       }
       case 'CLEAR_TRACKER': {
         s.tracker = [];
-        this._save('tracker', []);
+        this._save(s.currentLane + '_tracker', []);
         this._notify('tracker');
         break;
       }
@@ -224,10 +215,11 @@ switch (action) {
       }
       window._auditTimers = [];
 
-    // 加载新格式数据
-    this.state.models = this._load('models', {});
-    this.state.confirms = this._load('confirms', {});
-    this.state.tracker = this._load('tracker', []);
+    // 加载新格式数据（统一带赛道前缀，与 switchLane 保持一致）
+    const lane = this.state.currentLane;
+    this.state.models = this._load(lane + '_models', {});
+    this.state.confirms = this._load(lane + '_confirms', {});
+    this.state.tracker = this._load(lane + '_tracker', []);
     const sel = this._load(this.state.currentLane + '_selected', []);
     this.state.selected = new Set(sel);
     try {
@@ -245,9 +237,9 @@ switch (action) {
         this.state.models = old.models;
         this.state.confirms = old.confirms;
         this.state.tracker = old.tracker;
-        this._save('models', old.models);
-        this._save('confirms', old.confirms);
-        this._save('tracker', old.tracker);
+        this._save(lane + '_models', old.models);
+        this._save(lane + '_confirms', old.confirms);
+        this._save(lane + '_tracker', old.tracker);
         // 清理旧键
         MODEL_KEYS.forEach(k => { try { localStorage.removeItem('tradeflow_' + k); } catch(e) {} });
         for (let i = localStorage.length - 1; i >= 0; i--) {

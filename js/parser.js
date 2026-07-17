@@ -76,8 +76,8 @@ const Parser = {
       eats.push({
         symbol: pm ? pm[1] : name,
         direction: dir,
-        entry_low: gp('入场位'),
-        entry_high: gp('入场位'),
+        entry_low: (function(){const rm=s.match(/入场位[：:]\s*\$?([\d,]+(?:\.\d+)?)\s*[-–]\s*\$?([\d,]+(?:\.\d+)?)/);return rm?+rm[1].replace(/,/g,''):gp('入场位');}()),
+        entry_high: (function(){const rm=s.match(/入场位[：:]\s*\$?([\d,]+(?:\.\d+)?)\s*[-–]\s*\$?([\d,]+(?:\.\d+)?)/);return rm?+rm[2].replace(/,/g,''):gp('入场位');}()),
         stop: gp('止损位'),
         target1: gp('目标1'),
         target2: gp('目标2'),

@@ -96,6 +96,29 @@
     closeEditor();
   });
 
+  // editPrompt / deletePrompt 委托（只保留底部卡片系统，避免旧 handleAction 双触发）
+  cardList.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    var action = el.dataset.action;
+    var idx = parseInt(el.dataset.idx);
+    if (isNaN(idx)) return;
+    var lane = Store.state.currentLane;
+    var prompts = Store.getPrompts(lane);
+    if (action === 'editPrompt') {
+      if (!prompts || idx < 0 || idx >= prompts.length) return;
+      var p = prompts[idx];
+      editorTitle.textContent = '✏️ 编辑提示词';
+      editorVersion.value = p.version || '';
+      editorContent.value = p.content || '';
+      editorSave.dataset.editIdx = idx;
+      editorModal.style.display = 'flex';
+    } else if (action === 'deletePrompt') {
+      if (!confirm('确定删除这个版本吗？')) return;
+      Store.deletePrompt(lane, idx);
+    }
+  });
+
   // 暴露给外部（App.init 需要调用）
   window.renderPromptCards = renderPromptCards;
 

@@ -33,7 +33,7 @@ const Auditor = {
 
     // 4. 盈亏比
     const rr = Parser.parseRR(t.claimed_rr);
-    if (rr < 1.5) { checks.push({status:'warn',text:'盈亏比偏低（'+rr.toFixed(1)+':1）— 建议 ≥ 1.5:1'}); if (verdict==='pass') verdict='warn'; }
+    if (rr < 2.0) { checks.push({status:'warn',text:'盈亏比偏低（'+rr.toFixed(1)+':1）— 建议 ≥ 2:1'}); if (verdict==='pass') verdict='warn'; }
     else if (rr >= 3) checks.push({status:'pass',text:'盈亏比优秀（'+rr.toFixed(1)+':1）'});
     else checks.push({status:'pass',text:'盈亏比合理（'+rr.toFixed(1)+':1）'});
 

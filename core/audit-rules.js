@@ -53,7 +53,7 @@ const AuditRules = {
 
     // 4. \u76c8\u4e8f\u6bd4
     const rr = RR.parse(t.claimed_rr);
-    if (rr < 1.5) { checks.push({status:'warn',text:'\u76c8\u4e8f\u6bd4\u504f\u4f4e\uff08'+rr.toFixed(1)+':1\uff09\u2014 \u5efa\u8bae \u2265 1.5:1'}); if (verdict==='pass') verdict='warn'; }
+    if (rr < 2.0) { checks.push({status:'warn',text:'\u76c8\u4e8f\u6bd4\u504f\u4f4e\uff08'+rr.toFixed(1)+':1\uff09\u2014 \u5efa\u8bae \u2265 2:1'}); if (verdict==='pass') verdict='warn'; }
     else if (rr >= 3) checks.push({status:'pass',text:'\u76c8\u4e8f\u6bd4\u4f18\u79c0\uff08'+rr.toFixed(1)+':1\uff09'});
     else checks.push({status:'pass',text:'\u76c8\u4e8f\u6bd4\u5408\u7406\uff08'+rr.toFixed(1)+':1\uff09'});
 

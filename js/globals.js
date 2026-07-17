@@ -1,11 +1,4 @@
 
-window.onerror = function(msg, url, line) {
-  var d = document.createElement('div');
-  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#f85149;color:#fff;padding:10px;z-index:99999;font-size:12px;font-family:monospace';
-  d.textContent = 'JS ERROR: ' + msg + ' (line ' + line + ')';
-  document.body.appendChild(d);
-  console.error('JS ERROR:', msg, 'at', url, 'line', line);
-};
 // ============================================================
 // 交易审计台 v3 — audit.js
 // 模块: Store → Parser → Auditor → Renderer → Snapshot → App
