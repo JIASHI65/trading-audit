@@ -98,7 +98,7 @@ const Parser = {
     let inBox = false;
 
     function bt() { return {win_rate:0, avg_return:0, max_drawdown:0, sharpe:0, annualized:0, total_trades:0, period:'', source:''}; }
-    function nt() { return {entry_low:0, entry_high:0, stop:0, target1:0, target2:0, claimed_rr:0, size_cny:0, anchors:{stop:'', target1:'', target2:''}, falsification:'', exit_strategy:'', backtest:bt(), direction:'long', symbol:''}; }
+    function nt() { return {entry_low:0, entry_high:0, stop:0, target1:0, target2:0, claimed_rr:0, size_cny:0, anchors:{stop:'', target1:'', target2:''}, falsification:'', exit_strategy:'', market_env:'', bear_case:'', backtest:bt(), direction:'long', symbol:''}; }
     function ft() { if (current && (current.entry_low || current.stop || current.target1 || current.symbol)) { trades.push(current); } current = null; inBox = false; }
 
     for (let i = 0; i < lines.length; i++) {
@@ -147,6 +147,11 @@ const Parser = {
         const exitM = cl.match(/离场[策略逻辑][：:]\s*(.+)/);
         if (exitM) current.exit_strategy = exitM[1].replace(/[│┃].*$/, '').trim().substring(0, 100);
       }
+      // R-10 市场环境 / R-11 空头反驳（正文行内解析；若当前无标的则挂到最近一只）
+      const envM = line.match(/市场环境（R-10）[：:]\s*(.+)/);
+      if (envM && current) current.market_env = envM[1].replace(/[│┃].*$/, '').trim().substring(0, 120);
+      const bearM = line.match(/空头反驳（R-11）[：:]\s*(.+)/);
+      if (bearM && current) current.bear_case = bearM[1].replace(/[│┃].*$/, '').trim().substring(0, 200);
     }
     if (current && (current.entry_low || current.stop || current.target1 || current.symbol)) { trades.push(current); }
 
@@ -161,4 +166,3 @@ const Parser = {
     return trades.length > 0 ? { portfolio: { total: 10000, cash: 7000 }, trades: trades } : null;
   }
 };
-
