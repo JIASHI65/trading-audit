@@ -642,6 +642,23 @@ const App = {
       const first = savedModels[0];
       Store.dispatch('SET_MODEL', first);
       this.loadModelUI(first);
+    } else {
+      // 无数据：清空界面，显示空状态
+      document.getElementById('activeModel').textContent = '当前模型: —';
+      document.getElementById('activeModel').style.color = '';
+      document.getElementById('jsonInput').value = '';
+      document.getElementById('statsGrid').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('tradesList').innerHTML = '';
+      document.getElementById('comparisonView').style.display = 'none';
+      document.getElementById('modelAnalysis').style.display = 'block';
+      document.getElementById('modelAnalysis').innerHTML =
+        '<div style="padding:14px;background:rgba(255,255,255,.03);border-radius:8px;font-size:14px;color:#94A3B8;text-align:center">' +
+        '✏️ 当前赛道无数据，请选择模型并粘贴输出，或点"加载示例"</div>';
+      MODEL_KEYS.forEach(k => {
+        const btn = document.querySelector(`[data-model="${k}"]`);
+        if (btn) btn.classList.remove('active');
+      });
     }
   },
 
