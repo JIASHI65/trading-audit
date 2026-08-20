@@ -705,67 +705,74 @@ const App = {
   loadSample() {
     const samples = {
       claude: {
-        date: '2026-07-10', portfolio: {total:10000, cash:3000, same_direction:2},
+        date: '2026-07-10', portfolio: {total:10000, cash:5400, same_direction:3},
         trades: [
-          {symbol:'BTC/USDT', direction:'long', entry_low:61300, entry_high:61700, stop:60400, target1:62900, target2:64900, claimed_rr:2.2, size_cny:1600,
-            anchors:{stop:'61k整数关+区间下沿吞没前低', target1:'61k-63k区间上沿留100美元缓冲'}, falsification:'放量跌破60900且1小时内收不回', exit_strategy:'60400止损全平；62900卖半；64900清仓',
+          {symbol:'BTC/USDT', direction:'long', entry_low:61300, entry_high:61700, stop:60400, target1:64000, target2:66000, claimed_rr:2.2, size_cny:1600,
+            anchors:{stop:'61k整数关+区间下沿吞没前低', target1:'64k前高阻力', target2:'66k周线压力'}, falsification:'放量跌破60900且1小时内收不回', exit_strategy:'60400止损全平；64000卖半；66000清仓',
+            market_env:'宏观中性，波动率收缩，适合开仓', bear_case:'1) 若宏观转鹰压制风险资产 2) 64k上方套牢盘密集 3) 量能未确认突破',
             backtest:{win_rate:62, avg_return:1.8, max_drawdown:-8.5, sharpe:1.42, annualized:34.7, total_trades:47, period:'2025-01~2026-06', source:'Claude 策略回测'}},
-          {symbol:'ETH/USDT', direction:'long', entry_low:3380, entry_high:3420, stop:3300, target1:3550, target2:3680, claimed_rr:2.5, size_cny:1500,
-            anchors:{stop:'3300整数关下方（前低支撑）', target1:'3550日线MA20阻力'}, falsification:'日线实体跌破3300', exit_strategy:'3300止损全平；3550卖半；3680清仓'},
-          {symbol:'XAU/USD', direction:'short', entry_low:2395, entry_high:2395, stop:2415, target1:2360, target2:2340, claimed_rr:2.0, size_cny:1200,
-            anchors:{stop:'2415前高上方', target1:'2360短期支撑'}, falsification:'日线站稳2415则空头失效', exit_strategy:'2415止损；2360平50%；2340清仓'},
-          {symbol:'NVDA', direction:'long', entry_low:128, entry_high:132, stop:122, target1:142, target2:155, claimed_rr:2.5, size_cny:1500,
-            anchors:{stop:'122前低支撑位', target1:'142前高阻力'}, falsification:'周线跌破122则突破失败', exit_strategy:'122止损全平；142卖半；155清仓'}
+          {symbol:'ETH/USDT', direction:'long', entry_low:3380, entry_high:3420, stop:3300, target1:3620, target2:3750, claimed_rr:2.5, size_cny:1500,
+            anchors:{stop:'3300整数关下方（前低支撑）', target1:'3620日线MA20阻力', target2:'3750前高'}, falsification:'日线实体跌破3300', exit_strategy:'3300止损全平；3620卖半；3750清仓',
+            market_env:'宏观中性，波动率收缩，适合开仓', bear_case:'1) 以太坊抛压未消化 2) 3620上方筹码密集 3) 大盘若回调联动下杀'},
+          {symbol:'NVDA', direction:'long', entry_low:128, entry_high:130, stop:122, target1:148, target2:160, claimed_rr:2.5, size_cny:1500,
+            anchors:{stop:'122前低支撑位', target1:'148前高阻力', target2:'160整数关口'}, falsification:'周线跌破122则突破失败', exit_strategy:'122止损全平；148卖半；160清仓',
+            market_env:'宏观中性，半导体板块轮动活跃，适合开仓', bear_case:'1) AI资本开支不及预期 2) 估值仍偏高 3) 大盘回调易加速下跌'}
         ]
       },
       gpt: {
-        date: '2026-07-10', portfolio: {total:10000, cash:4000, same_direction:1},
+        date: '2026-07-10', portfolio: {total:10000, cash:7000, same_direction:2},
         trades: [
-          {symbol:'BTC/USDT', direction:'long', entry_low:62500, entry_high:62800, stop:61500, target1:64500, target2:66000, claimed_rr:2.8, size_cny:1000,
-            anchors:{stop:'61500突破前高回踩位下方', target1:'64500日线通道上沿'}, falsification:'BTC放量跌破61000即趋势破坏', exit_strategy:'61500止损；64500减1/3；66000清仓'},
+          {symbol:'BTC/USDT', direction:'long', entry_low:62500, entry_high:62800, stop:61500, target1:65200, target2:67000, claimed_rr:2.8, size_cny:1000,
+            anchors:{stop:'61500突破前高回踩位下方', target1:'65200日线通道上沿', target2:'67000整数关口'}, falsification:'BTC放量跌破61000即趋势破坏', exit_strategy:'61500止损；65200减1/3；67000清仓',
+            market_env:'宏观偏暖，风险偏好回升，适合开仓', bear_case:'1) 短线涨幅过快需回踩 2) 66k上方为前高压力 3) 资金可能轮动离场'},
           {symbol:'ETH/USDT', direction:'short', entry_low:3480, entry_high:3520, stop:3560, target1:3300, target2:3200, claimed_rr:3.2, size_cny:1000,
-            anchors:{stop:'3560双顶颈线上方', target1:'3300前低支撑', target2:'3200MA120'}, falsification:'日线站稳3560则空头失效', exit_strategy:'3560止损；3300平60%；3200清仓'},
-          {symbol:'SOL/USDT', direction:'long', entry_low:148, entry_high:152, stop:142, target1:165, target2:178, claimed_rr:2.5, size_cny:1000,
-            anchors:{stop:'142前低支撑', target1:'165前期阻力'}, falsification:'SOL日线跌破142趋势线', exit_strategy:'142止损；165卖半；178清仓'}
+            anchors:{stop:'3560双顶颈线上方', target1:'3300前低支撑', target2:'3200MA120'}, falsification:'日线站稳3560则空头失效', exit_strategy:'3560止损；3300平60%；3200清仓',
+            market_env:'宏观偏暖，风险偏好回升，适合开仓', bear_case:'1) 若突破颈线则双顶失效 2) 空头拥挤可能踩踏 3) 大盘强势压制做空'},
+          {symbol:'SOL/USDT', direction:'long', entry_low:148, entry_high:150.5, stop:142, target1:168, target2:180, claimed_rr:2.5, size_cny:1000,
+            anchors:{stop:'142前低支撑', target1:'168前期阻力', target2:'180趋势线压力'}, falsification:'SOL日线跌破142趋势线', exit_strategy:'142止损；168卖半；180清仓',
+            market_env:'宏观偏暖，风险偏好回升，适合开仓', bear_case:'1) SOL生态叙事降温 2) 168上方抛压重 3) 山寨季未确认'}
         ]
       },
       gemini: {
-        date: '2026-07-10', portfolio: {total:10000, cash:5000, same_direction:0},
+        date: '2026-07-10', portfolio: {total:10000, cash:6100, same_direction:2},
         trades: [
           {symbol:'BTC/USDT', direction:'short', entry_low:63000, entry_high:63300, stop:64200, target1:60500, target2:58800, claimed_rr:2.4, size_cny:1200,
-            anchors:{stop:'64200前高上方', target1:'60500通道中轨', target2:'58800通道下沿'}, falsification:'日线收于64200上方，空头失效', exit_strategy:'64200止损；60500平50%；58800清仓'},
-          {symbol:'XAU/USD', direction:'long', entry_low:2350, entry_high:2360, stop:2320, target1:2410, target2:2450, claimed_rr:2.6, size_cny:1500,
-            anchors:{stop:'2320日线支撑下方', target1:'2410前高阻力'}, falsification:'日线实体跌破2320，多头失效', exit_strategy:'2320止损；2410卖半；2450清仓'},
-          {symbol:'TSLA', direction:'long', entry_low:262, entry_high:268, stop:252, target1:285, target2:300, claimed_rr:2.4, size_cny:1200,
-            anchors:{stop:'252日线MA60支撑', target1:'285前高'}, falsification:'跌破252周线级别破位', exit_strategy:'252止损；285减1/3；300清仓'},
-          {symbol:'USD/JPY', direction:'short', entry_low:159.5, entry_high:160.2, stop:161.5, target1:157, target2:155, claimed_rr:2.2, size_cny:1100,
-            anchors:{stop:'161.5前高上方', target1:'157日线支撑区'}, falsification:'USD/JPY站稳161.5则干预无效', exit_strategy:'161.5止损；157平50%；155清仓'}
+            anchors:{stop:'64200前高上方', target1:'60500通道中轨', target2:'58800通道下沿'}, falsification:'日线收于64200上方，空头失效', exit_strategy:'64200止损；60500平50%；58800清仓',
+            market_env:'宏观中性，高位波动率扩张，适合开仓', bear_case:'1) 若突破64200空头失效 2) 逆势做空需快进快出 3) 现货买盘托底'},
+          {symbol:'XAU/USD', direction:'long', entry_low:2350, entry_high:2360, stop:2320, target1:2430, target2:2470, claimed_rr:2.6, size_cny:1500,
+            anchors:{stop:'2320日线支撑下方', target1:'2430前高阻力', target2:'2470月线压力'}, falsification:'日线实体跌破2320，多头失效', exit_strategy:'2320止损；2430卖半；2470清仓',
+            market_env:'地缘避险升温，黄金顺风，适合开仓', bear_case:'1) 美元反弹压制金价 2) 利率上行利空贵金属 3) 高位追多易被套'},
+          {symbol:'TSLA', direction:'long', entry_low:262, entry_high:267, stop:252, target1:292, target2:305, claimed_rr:2.4, size_cny:1200,
+            anchors:{stop:'252日线MA60支撑', target1:'292前高', target2:'305历史压力位'}, falsification:'跌破252周线级别破位', exit_strategy:'252止损；292减1/3；305清仓',
+            market_env:'财报预期乐观，板块轮动流入，适合开仓', bear_case:'1) 估值已透支财报预期 2) 交付不及预期风险 3) 高波动个股仓位需克制'}
         ]
       },
       grok: {
-        date: '2026-07-10', portfolio: {total:10000, cash:2500, same_direction:3},
+        date: '2026-07-10', portfolio: {total:10000, cash:4500, same_direction:3},
         trades: [
           {symbol:'BTC/USDT', direction:'long', entry_low:60500, entry_high:61000, stop:59500, target1:63500, target2:65000, claimed_rr:3.0, size_cny:2000,
-            anchors:{stop:'59500前低下方（超卖容忍位）', target1:'63500日线MA20'}, falsification:'BTC周线收盘低于59500则趋势破位', exit_strategy:'59500止损；63500卖半；65000清仓；若1小时不涨破62000减1/3'},
-          {symbol:'ETH/USDT', direction:'long', entry_low:3320, entry_high:3360, stop:3250, target1:3500, target2:3600, claimed_rr:2.4, size_cny:2000,
-            anchors:{stop:'3250前低下方', target1:'3500阻力位'}, falsification:'日线实体跌破3250', exit_strategy:'3250止损；3500卖半；3600清仓'},
-          {symbol:'DOGE/USDT', direction:'long', entry_low:0.124, entry_high:0.128, stop:0.118, target1:0.142, target2:0.155, claimed_rr:2.2, size_cny:1500,
-            anchors:{stop:'0.118前低下方', target1:'0.142阻力位'}, falsification:'跌破0.118则Meme退潮', exit_strategy:'0.118止损；0.142卖半；0.155清仓'},
-          {symbol:'NVDA', direction:'short', entry_low:138, entry_high:140, stop:144, target1:128, target2:120, claimed_rr:2.5, size_cny:2000,
-            anchors:{stop:'144前高上方', target1:'128MA60支撑'}, falsification:'NVDA站稳144则做空失效', exit_strategy:'144止损；128平50%；120清仓'}
+            anchors:{stop:'59500前低下方（超卖容忍位）', target1:'63500日线MA20', target2:'65000前高'}, falsification:'BTC周线收盘低于59500则趋势破位', exit_strategy:'59500止损；63500卖半；65000清仓；若1小时不涨破62000减1/3',
+            market_env:'宏观中性，波动率收缩，适合开仓', bear_case:'1) 反弹无量则难持续 2) 63500上方套牢盘 3) 利好兑现后回落风险'},
+          {symbol:'ETH/USDT', direction:'long', entry_low:3320, entry_high:3360, stop:3250, target1:3530, target2:3620, claimed_rr:2.4, size_cny:2000,
+            anchors:{stop:'3250前低下方', target1:'3530阻力位', target2:'3620前高'}, falsification:'日线实体跌破3250', exit_strategy:'3250止损；3530卖半；3620清仓',
+            market_env:'宏观中性，波动率收缩，适合开仓', bear_case:'1) 流动性分流至其他板块 2) 3530上方抛压 3) 汇率波动影响'},
+          {symbol:'DOGE/USDT', direction:'long', entry_low:0.124, entry_high:0.1264, stop:0.118, target1:0.144, target2:0.157, claimed_rr:2.2, size_cny:1500,
+            anchors:{stop:'0.118前低下方', target1:'0.142阻力位', target2:'0.155前高'}, falsification:'跌破0.118则Meme退潮', exit_strategy:'0.118止损；0.142卖半；0.155清仓',
+            market_env:'Meme热度回升，短线情绪活跃，适合开仓', bear_case:'1) Meme行情来得快去得也快 2) 0.142上方抛压重 3) 缺乏基本面支撑'}
         ]
       },
       deepseek: {
-        date: '2026-07-10', portfolio: {total:10000, cash:6000, same_direction:0},
+        date: '2026-07-10', portfolio: {total:10000, cash:7000, same_direction:2},
         trades: [
-          {symbol:'BTC/USDT', direction:'short', entry_low:62200, entry_high:61800, stop:63500, target1:59000, target2:57200, claimed_rr:2.2, size_cny:1000,
-            anchors:{stop:'63500右肩上方', target1:'59000颈线', target2:'57200头肩顶量度目标'}, falsification:'BTC日线收于63500上方，头肩顶失效', exit_strategy:'63500止损；59000平40%；57200清仓'},
-          {symbol:'ETH/USDT', direction:'short', entry_low:3450, entry_high:3480, stop:3540, target1:3320, target2:3220, claimed_rr:2.1, size_cny:1000,
-            anchors:{stop:'3540阻力位上方', target1:'3320支撑', target2:'3220前低'}, falsification:'站稳3540则转向', exit_strategy:'3540止损；3320平50%；3220清仓'},
-          {symbol:'XAU/USD', direction:'long', entry_low:2365, entry_high:2375, stop:2335, target1:2420, target2:2460, claimed_rr:2.3, size_cny:1000,
-            anchors:{stop:'2335日线支撑', target1:'2420前高'}, falsification:'日线跌破2335则多头失效', exit_strategy:'2335止损；2420卖半；2460清仓'},
-          {symbol:'AAPL', direction:'long', entry_low:218, entry_high:222, stop:212, target1:235, target2:248, claimed_rr:2.8, size_cny:1000,
-            anchors:{stop:'212前低支撑', target1:'235前高阻力'}, falsification:'跌破212则财报预期落空', exit_strategy:'212止损；235卖半；248清仓'}
+          {symbol:'BTC/USDT', direction:'short', entry_low:62000, entry_high:62400, stop:63500, target1:59000, target2:57200, claimed_rr:2.2, size_cny:1000,
+            anchors:{stop:'63500右肩上方', target1:'59000颈线', target2:'57200头肩顶量度目标'}, falsification:'BTC日线收于63500上方，头肩顶失效', exit_strategy:'63500止损；59000平40%；57200清仓',
+            market_env:'宏观中性，高位波动率扩张，适合开仓', bear_case:'1) 若站稳63500头肩顶失效 2) 空头拥挤易反弹 3) 现货买盘托底'},
+          {symbol:'ETH/USDT', direction:'short', entry_low:3450, entry_high:3480, stop:3540, target1:3310, target2:3220, claimed_rr:2.1, size_cny:1000,
+            anchors:{stop:'3540阻力位上方', target1:'3310支撑', target2:'3220前低'}, falsification:'站稳3540则转向', exit_strategy:'3540止损；3310平50%；3220清仓',
+            market_env:'宏观中性，高位波动率扩张，适合开仓', bear_case:'1) 若突破颈线则形态失效 2) 做空拥挤度偏高 3) 反弹力度超预期'},
+          {symbol:'AAPL', direction:'long', entry_low:218, entry_high:222, stop:212, target1:238, target2:250, claimed_rr:2.8, size_cny:1000,
+            anchors:{stop:'212前低支撑', target1:'238前高阻力', target2:'250整数关口'}, falsification:'跌破212则财报预期落空', exit_strategy:'212止损；238卖半；250清仓',
+            market_env:'财报预期乐观，科技板块顺风，适合开仓', bear_case:'1) 财报不及预期风险 2) 估值处于高位 3) 大盘回调拖累'}
         ]
       }
     };
