@@ -678,6 +678,9 @@ const App = {
     } else {
       document.getElementById('jsonInput').value = '';
       document.getElementById('comparisonView').style.display = 'none';
+      document.getElementById('statsGrid').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('tradesList').innerHTML = '';
       document.getElementById('modelAnalysis').style.display = 'block';
       document.getElementById('modelAnalysis').innerHTML =
         '<div style="padding:14px;background:rgba(255,255,255,.03);border-radius:8px;margin-bottom:12px;font-size:14px;color:#94A3B8;text-align:center;border-left:3px solid ' + color + '">' +
