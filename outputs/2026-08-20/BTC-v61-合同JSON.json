@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "version": "v6.1",
+    "generated_at": "2026-08-20T00:00:00Z"
+  },
+  "portfolio": {
+    "total": 10000,
+    "cash": 10000,
+    "same_direction": 0
+  },
+  "trades": [
+    {
+      "symbol": "BTC/USDT",
+      "direction": "long",
+      "entry_low": 68200,
+      "entry_high": 69200,
+      "stop": 66700,
+      "target1": 74200,
+      "target2": 77200,
+      "claimed_rr": 2.0,
+      "size_cny": 1600,
+      "anchors": {
+        "stop": "...",
+        "target1": "...",
+        "target2": "..."
+      },
+      "falsification": "...",
+      "exit_strategy": "...",
+      "market_env": "宏观中性 | 波动率扩张 | 观望",
+      "bear_case": "1) ... 2) ... 3) ...",
+      "backtest": {
+        "win_rate": 0,
+        "avg_return": 0,
+        "max_drawdown": 0,
+        "sharpe": 0,
+        "annualized": 0,
+        "total_trades": 0,
+        "period": "",
+        "source": ""
+      }
+    }
+  ]
+}
