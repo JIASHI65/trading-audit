@@ -341,8 +341,14 @@ const App = {
       }
     });
 
-    // 2分钟自动刷新行情
-    Store.state.pendingSnapshotTimer = setInterval(() => Snapshot.loadMarketSnapshot(), 120000); window._auditTimers.push(Store.state.pendingSnapshotTimer);
+    // 10分钟自动刷新行情（仅页面可见时，切走/最小化不刷新）
+    const refreshSnapshot = () => {
+      if (document.visibilityState === 'visible') Snapshot.loadMarketSnapshot();
+    };
+    Store.state.pendingSnapshotTimer = setInterval(refreshSnapshot, 600000); window._auditTimers.push(Store.state.pendingSnapshotTimer);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') Snapshot.loadMarketSnapshot();
+    });
 
     // [FIX Bug 5] 不再30秒自动刷新追踪（通过subscribe机制在数据变化时刷新）
     // 保留定时器仅用于检查外部数据变化
