@@ -283,11 +283,16 @@ const Renderer = {
     // 模型人格
     const modelPersonality = {};
     activeModels.forEach(k => {
-      const mp = {syms:0, longs:0, shorts:0, entries:[], stops:[], rrs:[], sizes:[], anchorOk:0, falOk:0, exitOk:0};
+      const mp = {syms:0, longs:0, shorts:0, entries:[], stops:[], rrs:[], sizes:[], anchorOk:0, falOk:0, exitOk:0, failCount:0, warnCount:0};
       sortedSymbols.forEach(sym => {
         const m = symMetrics[sym].models[k];
         if (!m) return;
         mp.syms++;
+        // 该模型在此品种的审计结果（沿用排行计算时的判定）
+        const audited = Auditor.auditTrade(m._raw, 10000);
+        const compChecks = Compliance.checkTrade(m._raw, 10000);
+        if (audited.verdict === 'fail' || compChecks.some(c => c.status === 'fail')) mp.failCount++;
+        else if (audited.verdict === 'warn' || compChecks.some(c => c.status === 'warn')) mp.warnCount++;
         if (m.dir === 'long' || m.dir === 'buy') mp.longs++; else mp.shorts++;
         if (m.entry) mp.entries.push(m.entry);
         if (m.stop) mp.stops.push(m.stop);
@@ -301,6 +306,7 @@ const Renderer = {
       mp.anchorRate = mp.syms > 0 ? mp.anchorOk / mp.syms : 0;
       mp.falRate = mp.syms > 0 ? mp.falOk / mp.syms : 0;
       mp.exitRate = mp.syms > 0 ? mp.exitOk / mp.syms : 0;
+      mp.passRate = mp.syms > 0 ? (mp.syms - mp.failCount - mp.warnCount) / mp.syms : 0;
       mp.bullPct = mp.syms > 0 ? mp.longs / mp.syms : 0;
       mp.totalRiskScore = (mp.anchorRate + mp.falRate + mp.exitRate) / 3;
       modelPersonality[k] = mp;
@@ -547,7 +553,10 @@ const Renderer = {
     activeModels.forEach(k => {
       const mp = modelPersonality[k];
       const bullLabel = mp.bullPct >= 0.7 ? '🟢 强烈看多' : (mp.bullPct >= 0.4 ? '⚪ 中性偏'+(mp.longs>mp.shorts?'多':'空') : '🔴 强烈看空');
-      const riskLabel = mp.totalRiskScore >= 0.7 ? '✅ 严谨' : (mp.totalRiskScore >= 0.4 ? '⚠️ 一般' : '❌ 粗糙');
+      let riskLabel, riskColor;
+      if (mp.failCount > 0) { riskLabel = '❌ 违规 ' + mp.failCount + ' 单'; riskColor = '#EF4444'; }
+      else if (mp.warnCount > 0) { riskLabel = '⚠️ 存疑 ' + mp.warnCount + ' 单'; riskColor = '#d29922'; }
+      else { riskLabel = '✅ 严谨（' + (mp.passRate*100).toFixed(0) + '% 通过）'; riskColor = '#22C55E'; }
       const rrLabel = mp.avgRR >= 2.5 ? '激进' : (mp.avgRR >= 1.8 ? '平衡' : '保守');
       h += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px">';
       h += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">';
@@ -556,7 +565,8 @@ const Renderer = {
       h += '<div style="font-size:10px;color:#94A3B8;line-height:1.7">';
       h += '<div>方向：' + bullLabel + '（' + mp.longs + '多/' + mp.shorts + '空）</div>';
       h += '<div>风格：' + rrLabel + '（平均RR ' + mp.avgRR.toFixed(1) + ':1）</div>';
-      h += '<div>风控：' + riskLabel + '（锚定' + (mp.anchorRate*100).toFixed(0) + '% / 证伪' + (mp.falRate*100).toFixed(0) + '% / 离场' + (mp.exitRate*100).toFixed(0) + '%）</div>';
+      h += '<div>风控：<span style="color:' + riskColor + ';font-weight:700">' + riskLabel + '</span></div>';
+      h += '<div style="font-size:9px;color:#64748B">锚定' + (mp.anchorRate*100).toFixed(0) + '% / 证伪' + (mp.falRate*100).toFixed(0) + '% / 离场' + (mp.exitRate*100).toFixed(0) + '%</div>';
       h += '</div></div>';
     });
     h += '</div></div>';
