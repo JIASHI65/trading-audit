@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>交易审计台 v3</title>
 
-<link rel="stylesheet" href="css/style.css?v=1787227787">
+<link rel="stylesheet" href="css/style.css?v=1787227934">
 <body>
 
 <div class="app" id="app">
@@ -77,8 +77,12 @@
         <h1>🔍 交易<span>审计台</span></h1>
         <div class="sub">多模型策略审计 · 字段绑定 v2.0</div>
       </div>
-     <div style="display:flex;gap:6px">
+     <div style="display:flex;gap:6px;align-items:center">
        <span id="activeModel" style="font-size:12px;color:var(--text-dim);padding:6px 0">当前模型: —</span>
+       <span id="liveStatus" title="行情自动刷新状态" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-dim);padding:4px 8px;border:1px solid var(--border);border-radius:999px;background:var(--surface)">
+         <span id="liveDot" style="width:8px;height:8px;border-radius:50%;background:#64748b;display:inline-block"></span>
+         <span id="liveText">初始化</span>
+       </span>
       </div>
     </div>
 
@@ -193,15 +197,15 @@
 
 
 
-  <script src="core/rr-formula.js?v=1787227787"></script>
-  <script src="core/audit-rules.js?v=1787227787"></script>
-  <script src="core/compliance.js?v=1787227787"></script>
-  <script src="js/globals.js?v=1787227787"></script>
-  <script src="js/store.js?v=1787227787"></script>
-  <script src="js/parser.js?v=1787227787"></script>
-  <script src="js/auditor.js?v=1787227787"></script>
-  <script src="js/renderer.js?v=1787227787"></script>
-  <script src="js/app.js?v=1787227787"></script>
-  <script src="js/prompt.js?v=1787227787"></script>
+  <script src="core/rr-formula.js?v=1787227934"></script>
+  <script src="core/audit-rules.js?v=1787227934"></script>
+  <script src="core/compliance.js?v=1787227934"></script>
+  <script src="js/globals.js?v=1787227934"></script>
+  <script src="js/store.js?v=1787227934"></script>
+  <script src="js/parser.js?v=1787227934"></script>
+  <script src="js/auditor.js?v=1787227934"></script>
+  <script src="js/renderer.js?v=1787227934"></script>
+  <script src="js/app.js?v=1787227934"></script>
+  <script src="js/prompt.js?v=1787227934"></script>
 </body>
 </html>

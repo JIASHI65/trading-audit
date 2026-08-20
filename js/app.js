@@ -2,6 +2,17 @@
 // 5. Snapshot — 行情数据加载
 // ============================================================
 const Snapshot = {
+  // ---------- 可见性状态灯 ----------
+  _updateStatusDot(force) {
+    const dot = document.getElementById('liveDot');
+    const txt = document.getElementById('liveText');
+    if (!dot || !txt) return;
+    const visible = force !== undefined ? force : document.visibilityState === 'visible';
+    dot.style.background = visible ? '#22c55e' : '#64748b';
+    dot.style.boxShadow = visible ? '0 0 6px rgba(34,197,94,.6)' : 'none';
+    txt.textContent = visible ? '行情自动刷新中' : '已暂停（页面未可见）';
+  },
+
   // ---------- 实时行情（腾讯 + 币安，免费直连） ----------
   LIVE: {
     tencent: 'https://qt.gtimg.cn/q=',
@@ -346,7 +357,9 @@ const App = {
       if (document.visibilityState === 'visible') Snapshot.loadMarketSnapshot();
     };
     Store.state.pendingSnapshotTimer = setInterval(refreshSnapshot, 600000); window._auditTimers.push(Store.state.pendingSnapshotTimer);
+    Snapshot._updateStatusDot(true);
     document.addEventListener('visibilitychange', () => {
+      Snapshot._updateStatusDot();
       if (document.visibilityState === 'visible') Snapshot.loadMarketSnapshot();
     });
 
