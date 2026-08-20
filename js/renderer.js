@@ -83,7 +83,9 @@ const Renderer = {
       html += '<div class="trade-checks">';
       r.checks.forEach(c => {
         const icon = c.status === 'pass' ? '✅' : (c.status === 'warn' ? '⚠️' : '❌');
-        html += '<div class="check-row ' + c.status + '"><span class="check-icon">' + icon + '</span><span class="check-text">' + this.esc(c.text) + '</span></div>';
+        // 去掉文本里自带的状态 emoji，只保留左侧图标列，避免一行两个 ✅
+        const clean = (c.text || '').replace(/^[✅❌⚠️🚫📊🌦️🐻]+ */, '');
+        html += '<div class="check-row ' + c.status + '"><span class="check-icon">' + icon + '</span><span class="check-text">' + this.esc(clean) + '</span></div>';
       });
       html += '</div>';
 
@@ -711,4 +713,3 @@ const Renderer = {
     document.getElementById('learnOutput').innerHTML = this.mdRender(input);
   }
 };
-
