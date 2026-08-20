@@ -2,7 +2,91 @@
 // 5. Snapshot — 行情数据加载
 // ============================================================
 const Snapshot = {
+  // ---------- 实时行情（腾讯 + 币安，免费直连） ----------
+  LIVE: {
+    tencent: 'https://qt.gtimg.cn/q=',
+    binance: 'https://api.binance.com/api/v3/ticker/24hr?symbol=',
+    // 需要实时拉取的标的（腾讯前缀: sh/sz/hk/us + 代码）
+    tencentCodes: [
+      'sh000001', 'sz399001', 'sz399006', 'sh000688', 'sh000300', 'sh000905',
+      'hk00700', 'hk09988', 'hk03690', 'hk09618', 'hk01810', 'hk01024', 'hk02382', 'hk02269', 'hk01211',
+      'usAAPL', 'usNVDA', 'usTSLA', 'usMSFT', 'usAMZN', 'usGOOGL', 'usMETA', 'usAMD',
+      'usINTC', 'usCRM', 'usNFLX', 'usPYPL', 'usUBER', 'usCOIN', 'usTSM', 'usAVGO',
+      'usQCOM', 'usMU', 'usSNOW', 'usCRWD', 'usNET', 'usSHOP', 'usPLTR', 'usSNAP',
+      'usSQ', 'usMRVL', 'usDDOG', 'usSPX', 'usIXIC', 'usDJI', 'usVIX'
+    ],
+    binanceCodes: ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT', 'ADAUSDT', 'DOGEUSDT', 'AVAXUSDT', 'DOTUSDT', 'LINKUSDT', 'MATICUSDT', 'ATOMUSDT', 'UNIUSDT', 'APTUSDT', 'ARBUSDT', 'OPUSDT', 'SUIUSDT', 'NEARUSDT', 'FILUSDT', 'INJUSDT']
+  },
+
+  // 腾讯 GBK 文本 → 解析成 {price, change}
+  _parseTencent(line) {
+    const m = line.match(/v_(\w+)="(.*)"/);
+    if (!m) return null;
+    const code = m[1];
+    const f = m[2].split('~');
+    if (f.length < 5) return null;
+    const price = parseFloat(f[3]);       // 当前价
+    const prevClose = parseFloat(f[4]);   // 昨收
+    if (!price || !prevClose) return null;
+    return { code, price, change: ((price - prevClose) / prevClose * 100) };
+  },
+
+  async fetchLiveQuotes() {
+    try {
+      const symbols = {};
+      // 腾讯：一次批量拉所有（A股/港股/美股）
+      const codes = Snapshot.LIVE.tencentCodes.join(',');
+      const resp = await fetch(Snapshot.LIVE.tencent + codes, {headers: {'Referer': 'https://gu.qq.com/'}});
+      if (resp.ok) {
+        // 腾讯返回 GBK，用 TextDecoder 转
+        const buf = await resp.arrayBuffer();
+        const text = new TextDecoder('gbk').decode(buf);
+        text.split(';').forEach(line => {
+          const r = Snapshot._parseTencent(line);
+          if (!r) return;
+          let key;
+          if (r.code.startsWith('sh') || r.code.startsWith('sz')) {
+            key = r.code.toUpperCase();  // SH000001 等
+          } else if (r.code.startsWith('hk')) {
+            key = r.code.slice(2) + '.HK';  // 00700.HK
+          } else if (r.code.startsWith('us')) {
+            key = r.code.slice(2);  // AAPL
+          } else {
+            key = r.code;
+          }
+          symbols[key] = {price: r.price, change: r.change, cat: Snapshot.getMarketCat(key)};
+        });
+      }
+
+      // 币安：逐标的拉 24h 涨跌（免费无 key）
+      for (const sym of Snapshot.LIVE.binanceCodes) {
+        try {
+          const r = await fetch(Snapshot.LIVE.binance + sym);
+          if (!r.ok) continue;
+          const d = await r.json();
+          const key = sym.replace('USDT', '/USDT');
+          symbols[key] = {
+            price: parseFloat(d.lastPrice),
+            change: parseFloat(d.priceChangePercent),
+            cat: Snapshot.getMarketCat(key)
+          };
+        } catch(e) {}
+      }
+
+      if (Object.keys(symbols).length === 0) return false;
+      Store.dispatch('SET_SNAPSHOT', {data: {symbols, _meta: {source: 'live', ts: Date.now()}}, ts: Date.now()});
+      this.updateMarketPanel();
+      return true;
+    } catch(e) {
+      console.warn('实时行情拉取失败，回落本地文件', e);
+      return false;
+    }
+  },
+
   async loadMarketSnapshot() {
+    // 优先实时直连；失败才回落本地 JSON / 内置数据
+    if (await this.fetchLiveQuotes()) return;
+
     const candidates = [
       './snapshots/latest_summary.json',
       './snapshots/latest.json',
@@ -204,9 +288,9 @@ const Snapshot = {
     const s = sym.toUpperCase();
     if (s.indexOf('BTC') >= 0 || s.indexOf('ETH') >= 0 || s.indexOf('SOL') >= 0 || s.indexOf('USDT') >= 0 || s.indexOf('USDC') >= 0) return '🪙 加密';
     if (s.indexOf('NVDA') >= 0 || s.indexOf('AAPL') >= 0 || s.indexOf('TSLA') >= 0 || s.indexOf('MSFT') >= 0 || s.indexOf('GOOGL') >= 0 || s.indexOf('AMZN') >= 0 || s.indexOf('META') >= 0) return '📈 美股';
-    if (s.indexOf('SP500') >= 0 || s.indexOf('NDX') >= 0 || s.indexOf('DJI') >= 0 || s.indexOf('VIX') >= 0) return '📈 美股';
+    if (s.indexOf('SP500') >= 0 || s.indexOf('SPX') >= 0 || s.indexOf('IXIC') >= 0 || s.indexOf('NDX') >= 0 || s.indexOf('DJI') >= 0 || s.indexOf('VIX') >= 0) return '📈 美股';
     if (s.indexOf('HSI') >= 0 || s.indexOf('HST') >= 0 || s.indexOf('HK') >= 0) return '🇭🇰 港股';
-    if (s.indexOf('SH') >= 0 || s.indexOf('SZ') >= 0 || s.indexOf('CSI') >= 0) return '🇨🇳 A股';
+    if (s.indexOf('SH') >= 0 || s.indexOf('SZ') >= 0 || s.indexOf('CSI') >= 0 || s.indexOf('000001') >= 0 || s.indexOf('399001') >= 0 || s.indexOf('399006') >= 0) return '🇨🇳 A股';
     if (s.indexOf('XAU') >= 0 || s.indexOf('XAG') >= 0 || s.indexOf('GOLD') >= 0 || s.indexOf('WTI') >= 0 || s.indexOf('BRENT') >= 0 || s.indexOf('OIL') >= 0 || s.indexOf('铜') >= 0 || s.indexOf('天然气') >= 0) return '🥇 商品';
     if (s.indexOf('DXY') >= 0 || s.indexOf('EUR') >= 0 || s.indexOf('JPY') >= 0 || s.indexOf('GBP') >= 0 || s.indexOf('CNH') >= 0) return '💱 外汇';
     if (s.indexOf('Y') >= 0 && s.indexOf('年期') >= 0) return '📜 债券';
@@ -772,4 +856,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-
