@@ -696,14 +696,8 @@ const App = {
     // 确定当前模型
     let modelId = Store.state.activeModel;
     if (!modelId || !MODEL_KEYS.includes(modelId)) {
-      // 如果有模型数据，但没选模型，选第一个有数据的
-      const existing = Object.keys(Store.state.models);
-      if (existing.length > 0) {
-        modelId = existing[0];
-      } else {
-        modelId = 'claude';
-      }
-      Store.dispatch('SET_MODEL', modelId);
+      alert('请先选择要保存到哪个模型（点上方模型按钮：Claude / GPT / Gemini / Grok / DeepSeek），再开始审计');
+      return;
     }
 
     Store.dispatch('SAVE_MODEL', {id: modelId, input: raw, data});
