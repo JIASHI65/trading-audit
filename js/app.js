@@ -427,6 +427,20 @@ const App = {
         break;
       }
 
+      // ----- 清空全部模型 -----
+      case 'clearAllModels': {
+        if (!confirm('确定清空所有模型的已保存数据？此操作不可恢复。')) break;
+        MODEL_KEYS.forEach(k => {
+          Store.dispatch('CLEAR_MODEL', k);
+        });
+        document.getElementById('jsonInput').value = '';
+        document.getElementById('statsGrid').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'none';
+        document.getElementById('modelAnalysis').style.display = 'none';
+        if (s.activeModel) this.loadModelUI(s.activeModel);
+        break;
+      }
+
       // ----- 加载示例 -----
       case 'loadSample': {
         this.loadSample();
