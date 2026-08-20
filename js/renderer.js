@@ -146,7 +146,12 @@ const Renderer = {
   // ----- 完整渲染入口 -----
   render(modelId) {
     const data = Store.getModelTrades(modelId);
-    if (!data) return;
+    if (!data) {
+      document.getElementById('statsGrid').style.display = 'none';
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('tradesList').innerHTML = '';
+      return;
+    }
     if (!data.trades || !Array.isArray(data.trades)) {
       document.getElementById('tradesList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-dim);font-size:13px">数据格式异常，无法渲染</div>';
       return;
