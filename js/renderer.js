@@ -241,11 +241,19 @@ const Renderer = {
     // 计算逐品种指标
     const symMetrics = {};
     sortedSymbols.forEach(sym => {
-      const sm = {models:{}, dirs:{long:0, short:0}, total:0};
+      const sm = {models:{}, dirs:{long:0, short:0}, total:0, verdicts:{pass:0, warn:0, fail:0}};
       activeModels.forEach(k => {
         const t = allSymbols[sym][k];
         if (!t) return;
         sm.total++;
+        // 审计判定（LLM 11条 + 数字合规合并）
+        const audited = Auditor.auditTrade(t, (Store.getModelTrades(k) || {}).portfolio ? (Store.getModelTrades(k).portfolio.total || 10000) : 10000);
+        const compChecks = Compliance.checkTrade(t, 10000);
+        const hasFail = audited.verdict === 'fail' || compChecks.some(c => c.status === 'fail');
+        const hasWarn = audited.verdict === 'warn' || compChecks.some(c => c.status === 'warn');
+        if (hasFail) sm.verdicts.fail++;
+        else if (hasWarn) sm.verdicts.warn++;
+        else sm.verdicts.pass++;
         const d = (t.direction || '').toLowerCase();
         if (d === 'long' || d === 'buy') sm.dirs.long++;
         else if (d === 'short' || d === 'sell') sm.dirs.short++;
@@ -267,6 +275,8 @@ const Renderer = {
       sm.consensus = sm.total > 0 ? maxDir / sm.total : 0;
       sm.consensusDir = sm.dirs.long > sm.dirs.short ? 'long' : (sm.dirs.short > sm.dirs.long ? 'short' : 'tie');
       sm.divergence = sm.total >= 3 ? 1 - sm.consensus : 0;
+      // 任何模型判 fail → 品种整体违规，不参与推荐
+      sm.blocked = sm.verdicts.fail > 0;
       symMetrics[sym] = sm;
     });
 
@@ -382,6 +392,8 @@ const Renderer = {
     const rankings = [];
     sortedSymbols.forEach(sym => {
       const sm = symMetrics[sym];
+      // 违规品种不进推荐排行
+      if (sm.blocked) return;
       let entrySum = 0, entryCnt = 0, rrSum = 0, rrCnt = 0;
       let anchorOk = 0, falOk = 0, exitOk = 0, modelsCount = 0;
       activeModels.forEach(k => {
@@ -407,6 +419,37 @@ const Renderer = {
       });
     });
     rankings.sort((a, b) => b.score - a.score);
+
+    // 违规拦截区（放在排行上方，先给人看为什么被拦）
+    const blockedSyms = sortedSymbols.filter(sym => symMetrics[sym].blocked);
+    if (blockedSyms.length > 0) {
+      h += '<div class="bi-section" style="border-left:3px solid #EF4444">';
+      h += '<div class="bi-section-title">🚫 违规拦截<span class="badge" style="background:rgba(239,68,68,.12);color:#EF4444">不推荐入场</span></div>';
+      h += '<div style="font-size:11px;color:#94A3B8;margin-bottom:8px">以下品种存在模型审计违规（❌），已从推荐排行剔除</div>';
+      h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+      h += '<tr style="color:#94A3B8;font-size:10px;border-bottom:1px solid var(--border)">';
+      h += '<th style="padding:6px 8px;text-align:left">品种</th><th style="padding:6px 8px;text-align:center">通过</th><th style="padding:6px 8px;text-align:center">存疑</th><th style="padding:6px 8px;text-align:center">违规</th><th style="padding:6px 8px;text-align:center">原因</th></tr>';
+      blockedSyms.forEach(sym => {
+        const sm = symMetrics[sym];
+        const failReasons = [];
+        activeModels.forEach(k => {
+          const m = sm.models[k];
+          if (!m || !m._raw) return;
+          const audited = Auditor.auditTrade(m._raw, 10000);
+          const compChecks = Compliance.checkTrade(m._raw, 10000);
+          const fails = audited.checks.concat(compChecks).filter(c => c.status === 'fail');
+          fails.forEach(f => failReasons.push(MODEL_LABELS[k].split(' ')[0] + ': ' + f.text.replace(/^[✅❌⚠️🚫📊🌦️🐻]+ */, '').slice(0, 28)));
+        });
+        h += '<tr style="border-bottom:1px solid rgba(148,163,184,.08)">';
+        h += '<td style="padding:6px 8px;font-weight:700">' + esc(sym) + '</td>';
+        h += '<td style="padding:6px 8px;text-align:center;color:#22C55E">' + sm.verdicts.pass + '</td>';
+        h += '<td style="padding:6px 8px;text-align:center;color:#d29922">' + sm.verdicts.warn + '</td>';
+        h += '<td style="padding:6px 8px;text-align:center;color:#EF4444;font-weight:700">' + sm.verdicts.fail + '</td>';
+        h += '<td style="padding:6px 8px;color:#EF4444;font-size:10px">' + esc(failReasons.slice(0, 3).join('；') || '审计违规') + '</td>';
+        h += '</tr>';
+      });
+      h += '</table></div></div>';
+    }
 
     h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
     h += '<tr style="color:#94A3B8;font-size:10px;border-bottom:1px solid var(--border)">';
