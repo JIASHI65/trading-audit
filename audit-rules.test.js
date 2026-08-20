@@ -79,6 +79,50 @@ eq(AuditRules.auditTrade({ ...tLong, market_env:'波动率扩张，观望' }, 10
 // Test 13: 无空头反驳 → warn
 eq(AuditRules.auditTrade({ ...tLong, bear_case:'' }, 10000).verdict, 'warn', '无空头反驳 → warn');
 
+// ===== Compliance 数字硬检查 =====
+console.log('\n📐 Compliance（Vibe 式数字风控）');
+const compCode = fs.readFileSync('core/compliance.js', 'utf-8');
+const Compliance = new Function(compCode + '; return Compliance;')();
+
+// Test 14: 单笔仓位超 20% → fail
+const cLong = { symbol:'BTC/USDT', direction:'long', entry_low:61000, entry_high:61700, stop:60400, target1:62900, target2:64900, claimed_rr:2.2, size_cny:3000, falsification:'x', exit_strategy:'y' };
+eq(Compliance.checkTrade(cLong, 10000).some(c => c.status === 'fail'), true, '仓位30% → fail');
+
+// Test 15: 盈亏比反算 < 2 → fail（自报 2.2 但价位算出来 1.2）
+const cBadRR = { symbol:'BTC/USDT', direction:'long', entry_low:61000, entry_high:61700, stop:60800, target1:61700, target2:62900, claimed_rr:2.2, size_cny:1000 };
+eq(Compliance.checkTrade(cBadRR, 10000).some(c => c.status === 'fail' && c.text.includes('盈亏比反算')), true, 'RR反算1.2 → fail');
+
+// Test 16: 入场区间过宽 → fail
+const cWide = { symbol:'BTC/USDT', direction:'long', entry_low:60000, entry_high:63000, stop:59000, target1:65000, target2:67000, claimed_rr:2.2, size_cny:1000 };
+eq(Compliance.checkTrade(cWide, 10000).some(c => c.status === 'fail' && c.text.includes('入场区间')), true, '区间5% → fail');
+
+// Test 17: 组合现金不足 40% → fail
+const cPortBad = [
+  { symbol:'A', direction:'long', size_cny:2500 },
+  { symbol:'B', direction:'long', size_cny:2500 },
+  { symbol:'C', direction:'long', size_cny:2500 }
+];
+eq(Compliance.checkPortfolio(cPortBad, { total:10000 }).some(c => c.status === 'fail' && c.text.includes('现金')), true, '现金25% → fail');
+
+// Test 18: 同方向 4 笔 → fail
+const cDirBad = [
+  { symbol:'A', direction:'long', size_cny:500 },
+  { symbol:'B', direction:'long', size_cny:500 },
+  { symbol:'C', direction:'long', size_cny:500 },
+  { symbol:'D', direction:'long', size_cny:500 }
+];
+eq(Compliance.checkPortfolio(cDirBad, { total:10000 }).some(c => c.status === 'fail' && c.text.includes('同方向')), true, '同向4笔 → fail');
+
+// Test 19: 合规单全 pass
+const cGood = { symbol:'BTC/USDT', direction:'long', entry_low:61000, entry_high:61700, stop:60400, target1:64000, target2:66000, claimed_rr:2.2, size_cny:1600 };
+eq(Compliance.checkTrade(cGood, 10000).every(c => c.status === 'pass'), true, '合规单全 pass');
+
+// Test 20: 黑名单 → fail
+const cBlock = { symbol:'XXX', direction:'long', entry_low:1, entry_high:1.01, stop:0.95, target1:1.1, target2:1.2, claimed_rr:2.2, size_cny:1000 };
+eq(Compliance.checkTrade(cBlock, 10000).some(c => c.status === 'fail' && c.text.includes('黑名单')), false, '黑名单空 → 不误伤');
+Compliance.LIMITS.excludeSymbols.push('XXX');
+eq(Compliance.checkTrade(cBlock, 10000).some(c => c.status === 'fail' && c.text.includes('黑名单')), true, '加入黑名单 → fail');
+
 // ===== calcPersonality =====
 console.log('\n📐 calcPersonality');
 const p = AuditRules.calcPersonality([tLong, tShort]);
