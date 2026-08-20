@@ -97,7 +97,31 @@ const AuditRules = {
       checks.push({status:'warn',text:'\ud83d\udcca \u56de\u6d4b\u6570\u636e\u4e3a\u7a7a\uff08total_trades=0\uff09'});
     }
 
-    // 10. 14\u5b57\u6bb5\u5b8c\u6574\u6027
+    // 10. \u5e02\u573a\u73af\u5883\u68c0\u67e5\uff08\u5b8f\u89c2/\u6ce2\u52a8\u7387/\u62e5\u6324\u5ea6\uff09
+    const env = (t.market_env || '').trim();
+    if (!env) {
+      checks.push({status:'fail',text:'\u274c \u672a\u505a\u5e02\u573a\u73af\u5883\u8bc4\u4f30 \u2014 \u5f53\u524d\u5b8f\u89c2/\u6ce2\u52a8\u7387\u9002\u4e0d\u9002\u5408\u5f00\u4ed3\uff1f'});
+      verdict='fail';
+    } else if (/禁止|不适合/.test(env)) {
+      checks.push({status:'fail',text:'\u274c \u5e02\u573a\u73af\u5883\uff1a' + env});
+      verdict='fail';
+    } else if (/观望|谨慎/.test(env)) {
+      checks.push({status:'warn',text:'\u26a0\ufe0f \u5e02\u573a\u73af\u5883\uff1a' + env});
+      if (verdict==='pass') verdict='warn';
+    } else {
+      checks.push({status:'pass',text:'\u2705 \u5e02\u573a\u73af\u5883\uff1a' + env});
+    }
+
+    // 11. \u7a7a\u5934\u5f8b\u5e08\u53cd\u9a73\uff08\u81f3\u5c11 3 \u6761\u53cd\u9762\u7406\u7531\uff09
+    const bear = (t.bear_case || '').trim();
+    if (!bear || bear.length < 10) {
+      checks.push({status:'warn',text:'\u26a0\ufe0f \u65e0\u7a7a\u5934\u53cd\u9a73 \u2014 \u81f3\u5c11\u7ed9\u51fa 3 \u6761\u53cd\u9762\u7406\u7531'});
+      if (verdict==='pass') verdict='warn';
+    } else {
+      checks.push({status:'pass',text:'\u2705 \u7a7a\u5934\u53cd\u9a73\uff1a' + bear.substring(0,50) + (bear.length>50?'...':'')});
+    }
+
+    // 12. 14\u5b57\u6bb5\u5b8c\u6574\u6027
     const missing = [];
     AuditRules.R10A_REQUIRED_FIELDS.forEach(f => { const v = t[f]; if (v === undefined || v === null || v === '' || v === 0) missing.push(f); });
     const anchorFields = [];
@@ -153,6 +177,6 @@ const AuditRules = {
   FIELD_KEYS: {
     required: ['symbol','direction','entry_low','entry_high','stop','target1','target2','claimed_rr','size_cny'],
     anchor: ['anchors.stop','anchors.target1','anchors.target2'],
-    narrative: ['falsification','exit_strategy']
+    narrative: ['falsification','exit_strategy','market_env','bear_case']
   }
 };

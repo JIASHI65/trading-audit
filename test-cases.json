@@ -1,7 +1,7 @@
 {
   "description": "审计合同规则测试用例 — 用于 JS 和 Python 两端逐字比对",
-  "notes": "JS 端用 audit-rules.test.js 运行，Python 端应读此文件逐字比对输出",
-  "version": "1.0",
+  "notes": "JS 端用 audit-rules.test.js 运行，Python 端应读此文件逐字比对输出 版本 1.1 新增 R-11 市场环境 / R-12 空头反驳。",
+  "version": "1.1",
   "tests": [
     {
       "id": "correct_long",
@@ -33,7 +33,9 @@
           "total_trades": 47,
           "period": "2025-01~2026-06",
           "source": "回测"
-        }
+        },
+        "market_env": "宏观中性，波动率适中，适合开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位存在套牢盘 3) 量能未确认"
       },
       "expected_verdict": "pass"
     },
@@ -56,7 +58,9 @@
           "target1": "63k"
         },
         "falsification": "跌破60900",
-        "exit_strategy": "60400止损全平"
+        "exit_strategy": "60400止损全平",
+        "market_env": "宏观中性，波动率适中，适合开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位存在套牢盘 3) 量能未确认"
       },
       "expected_verdict": "fail"
     },
@@ -80,7 +84,9 @@
           "target2": "120支撑"
         },
         "falsification": "站稳144失效",
-        "exit_strategy": "144止损；128平50%；120清仓"
+        "exit_strategy": "144止损；128平50%；120清仓",
+        "market_env": "宏观中性，波动率适中，适合开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位存在套牢盘 3) 量能未确认"
       },
       "expected_verdict": "pass"
     },
@@ -102,7 +108,9 @@
           "stop": "144阻力"
         },
         "falsification": "站稳144失效",
-        "exit_strategy": "144止损"
+        "exit_strategy": "144止损",
+        "market_env": "宏观中性，波动率适中，适合开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位存在套牢盘 3) 量能未确认"
       },
       "expected_verdict": "fail"
     },
@@ -124,7 +132,9 @@
           "target1": "63k"
         },
         "falsification": "跌破60900",
-        "exit_strategy": "60400止损全平"
+        "exit_strategy": "60400止损全平",
+        "market_env": "宏观中性，波动率适中，适合开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位存在套牢盘 3) 量能未确认"
       },
       "expected_verdict": "fail"
     },
@@ -146,7 +156,9 @@
           "target1": "阻力"
         },
         "falsification": "跌破支撑",
-        "exit_strategy": "95止损；120止盈"
+        "exit_strategy": "95止损；120止盈",
+        "market_env": "宏观中性，波动率适中，适合开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位存在套牢盘 3) 量能未确认"
       },
       "expected_verdict": "warn"
     },
@@ -167,7 +179,9 @@
           "stop": "支撑"
         },
         "falsification": "",
-        "exit_strategy": "95止损"
+        "exit_strategy": "95止损",
+        "market_env": "宏观中性，波动率适中，适合开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位存在套牢盘 3) 量能未确认"
       },
       "expected_verdict": "fail"
     },
@@ -188,9 +202,115 @@
           "stop": "支撑"
         },
         "falsification": "跌破",
-        "exit_strategy": ""
+        "exit_strategy": "",
+        "market_env": "宏观中性，波动率适中，适合开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位存在套牢盘 3) 量能未确认"
       },
       "expected_verdict": "fail"
+    },
+    {
+      "id": "no_market_env",
+      "desc": "缺失市场环境 → verdict=fail",
+      "total": 10000,
+      "expect": "fail",
+      "trade": {
+        "symbol": "BTC/USDT",
+        "direction": "long",
+        "entry_low": 61000,
+        "entry_high": 61700,
+        "stop": 60400,
+        "target1": 62900,
+        "target2": 64900,
+        "claimed_rr": 2.2,
+        "size_cny": 1600,
+        "anchors": {
+          "stop": "61k",
+          "target1": "63k",
+          "target2": "65k"
+        },
+        "falsification": "跌破60900",
+        "exit_strategy": "60400止损全平；62900卖半；64900清仓",
+        "market_env": "",
+        "bear_case": "1) 宏观可能转向 2) 关键位套牢盘 3) 量能未确认"
+      }
+    },
+    {
+      "id": "market_env_ban",
+      "desc": "市场环境禁止开仓 → verdict=fail",
+      "total": 10000,
+      "expect": "fail",
+      "trade": {
+        "symbol": "BTC/USDT",
+        "direction": "long",
+        "entry_low": 61000,
+        "entry_high": 61700,
+        "stop": 60400,
+        "target1": 62900,
+        "target2": 64900,
+        "claimed_rr": 2.2,
+        "size_cny": 1600,
+        "anchors": {
+          "stop": "61k",
+          "target1": "63k",
+          "target2": "65k"
+        },
+        "falsification": "跌破60900",
+        "exit_strategy": "60400止损全平；62900卖半；64900清仓",
+        "market_env": "宏观逆风，禁止开仓",
+        "bear_case": "1) 宏观可能转向 2) 关键位套牢盘 3) 量能未确认"
+      }
+    },
+    {
+      "id": "market_env_watch",
+      "desc": "市场环境观望 → verdict=warn",
+      "total": 10000,
+      "expect": "warn",
+      "trade": {
+        "symbol": "BTC/USDT",
+        "direction": "long",
+        "entry_low": 61000,
+        "entry_high": 61700,
+        "stop": 60400,
+        "target1": 62900,
+        "target2": 64900,
+        "claimed_rr": 2.2,
+        "size_cny": 1600,
+        "anchors": {
+          "stop": "61k",
+          "target1": "63k",
+          "target2": "65k"
+        },
+        "falsification": "跌破60900",
+        "exit_strategy": "60400止损全平；62900卖半；64900清仓",
+        "market_env": "波动率扩张，观望",
+        "bear_case": "1) 宏观可能转向 2) 关键位套牢盘 3) 量能未确认"
+      }
+    },
+    {
+      "id": "no_bear_case",
+      "desc": "缺失空头反驳 → verdict=warn",
+      "total": 10000,
+      "expect": "warn",
+      "trade": {
+        "symbol": "BTC/USDT",
+        "direction": "long",
+        "entry_low": 61000,
+        "entry_high": 61700,
+        "stop": 60400,
+        "target1": 62900,
+        "target2": 64900,
+        "claimed_rr": 2.2,
+        "size_cny": 1600,
+        "anchors": {
+          "stop": "61k",
+          "target1": "63k",
+          "target2": "65k"
+        },
+        "falsification": "跌破60900",
+        "exit_strategy": "60400止损全平；62900卖半；64900清仓",
+        "market_env": "宏观中性，适合开仓",
+        "bear_case": ""
+      }
     }
   ]
 }

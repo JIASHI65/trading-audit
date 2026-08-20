@@ -37,14 +37,14 @@ eq(RR.parse(undefined), 0, 'undefined');
 console.log('\n📐 auditTrade');
 
 // Test 1: 正确做多
-const tLong = { symbol:'BTC/USDT', direction:'long', entry_low:61000, entry_high:61700, stop:60400, target1:62900, target2:64900, claimed_rr:2.2, size_cny:1600, anchors:{stop:'61k',target1:'63k',target2:'65k'}, falsification:'跌破60900', exit_strategy:'60400止损；62900卖半；64900清仓', backtest:{win_rate:62,avg_return:1.8,max_drawdown:-8.5,sharpe:1.42,annualized:34.7,total_trades:47,period:'2025-01~2026-06',source:'回测'} };
+const tLong = { symbol:'BTC/USDT', direction:'long', entry_low:61000, entry_high:61700, stop:60400, target1:62900, target2:64900, claimed_rr:2.2, size_cny:1600, anchors:{stop:'61k',target1:'63k',target2:'65k'}, falsification:'跌破60900', exit_strategy:'60400止损；62900卖半；64900清仓', market_env:'宏观中性，BTC 波动率收缩，适合开仓', bear_case:'1) 宏观转鹰可能压制风险资产 2) 61000 上方套牢盘密集 3) 量能未确认突破', backtest:{win_rate:62,avg_return:1.8,max_drawdown:-8.5,sharpe:1.42,annualized:34.7,total_trades:47,period:'2025-01~2026-06',source:'回测'} };
 eq(AuditRules.auditTrade(tLong, 10000).verdict, 'pass', '正确做多');
 
 // Test 2: 方向矛盾
 eq(AuditRules.auditTrade({ ...tLong, stop:62000 }, 10000).verdict, 'fail', '做多止损>入场');
 
 // Test 3: 做空正确
-const tShort = { symbol:'NVDA', direction:'short', entry_low:138, entry_high:140, stop:144, target1:128, target2:120, claimed_rr:2.5, size_cny:2000, anchors:{stop:'144阻力',target1:'128支撑',target2:'120支撑'}, falsification:'站稳144失效', exit_strategy:'144止损；128平50%；120清仓' };
+const tShort = { symbol:'NVDA', direction:'short', entry_low:138, entry_high:140, stop:144, target1:128, target2:120, claimed_rr:2.5, size_cny:2000, anchors:{stop:'144阻力',target1:'128支撑',target2:'120支撑'}, falsification:'站稳144失效', exit_strategy:'144止损；128平50%；120清仓', market_env:'宏观中性，半导体板块轮动活跃，适合开仓', bear_case:'1) AI 资本开支可能不及预期 2) 估值仍偏高 3) 大盘若回调易加速下跌' };
 eq(AuditRules.auditTrade(tShort, 10000).verdict, 'pass', '正确做空');
 
 // Test 4: 做空矛盾
@@ -66,6 +66,18 @@ eq(AuditRules.auditTrade({ ...tLong, falsification:'' }, 10000).verdict, 'fail',
 
 // Test 9: 无离场策略
 eq(AuditRules.auditTrade({ ...tLong, exit_strategy:'' }, 10000).verdict, 'fail', '无离场');
+
+// Test 10: 无市场环境评估
+eq(AuditRules.auditTrade({ ...tLong, market_env:'' }, 10000).verdict, 'fail', '无市场环境');
+
+// Test 11: 市场环境禁止开仓
+eq(AuditRules.auditTrade({ ...tLong, market_env:'宏观逆风，禁止开仓' }, 10000).verdict, 'fail', '市场禁止开仓');
+
+// Test 12: 市场环境观望 → warn
+eq(AuditRules.auditTrade({ ...tLong, market_env:'波动率扩张，观望' }, 10000).verdict, 'warn', '市场观望 → warn');
+
+// Test 13: 无空头反驳 → warn
+eq(AuditRules.auditTrade({ ...tLong, bear_case:'' }, 10000).verdict, 'warn', '无空头反驳 → warn');
 
 // ===== calcPersonality =====
 console.log('\n📐 calcPersonality');
