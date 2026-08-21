@@ -21,6 +21,14 @@ const AuditRules = {
     'stop', 'target1', 'target2', 'claimed_rr', 'size_cny'
   ],
 
+  // ---------- R-13: 软话术黑名单（禁打太极） ----------
+  SOFT_PHRASES: [
+    '\u9700\u8c28\u614e', '\u8c28\u614e\u89c2\u5bdf', '\u918c\u60c5',
+    '\u6ce8\u610f\u98ce\u9669', '\u98ce\u9669\u4e0e\u673a\u4f1a\u5e76\u5b58',
+    '\u9759\u89c2\u5176\u53d8', '\u8fb9\u8d70\u8fb9\u770b', '\u6709\u5f85\u89c2\u5bdf',
+    '\u89c1\u673a\u884c\u4e8b', '\u4e0d\u597d\u8bf4', '\u8bf4\u4e0d\u51c6', '\u518d\u770b\u5427'
+  ],
+
   // ---------- R-10a: 单笔审计 ----------
   auditTrade(t, total) {
     let verdict = 'pass';
@@ -136,6 +144,20 @@ const AuditRules = {
       if (verdict === 'pass') verdict = 'warn';
     } else {
       checks.push({status:'pass',text:'\u2705 14\u5b57\u6bb5\u5b8c\u6574\u6027 \u2014 \u5168\u90e8\u5b57\u6bb5\u5df2\u586b\u5145'});
+    }
+
+    // 13. \u8f6f\u8bdd\u672f\u68c0\u6d4b\uff08R-13 \u7ed3\u8bba\u786c\u7ea6\u675f\uff09
+    const narrative = [
+      t.conclusion,
+      t.falsification, t.exit_strategy, t.market_env, t.bear_case,
+      t.anchors && t.anchors.stop, t.anchors && t.anchors.target1, t.anchors && t.anchors.target2
+    ].filter(Boolean).join(' ');
+    const hits = AuditRules.SOFT_PHRASES.filter(p => narrative.includes(p));
+    if (hits.length > 0) {
+      checks.push({status:'warn',text:'\u26a0\ufe0f \u8f6f\u8bdd\u672f\uff1a' + hits.join('\u3001') + ' \u2014 \u5fc5\u987b\u6539\u4e3a\u2705\u5408\u683c/\u274c\u4e0d\u5408\u683c/\u26a0\ufe0f\u6709\u6761\u4ef6+\u4e00\u53e5\u8bdd\u4f9d\u636e'});
+      if (verdict === 'pass') verdict = 'warn';
+    } else {
+      checks.push({status:'pass',text:'\u2705 \u7ed3\u8bba\u786c\u7ea6\u675f \u2014 \u672a\u68c0\u51fa\u8f6f\u8bdd\u672f'});
     }
 
     return {verdict, checks};

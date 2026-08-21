@@ -171,6 +171,24 @@ eq(AuditChain.verify(tampered3).ok, false, '删除中间笔 → 断裂');
 eq(AuditChain.summary(recs).length, 2, 'summary 长度');
 eq(AuditChain.summary(recs).latestHash, recs[1].hash, 'summary 最新 hash');
 
+// ===== R-13 软话术检测 =====
+console.log('\n📐 R-13 软话术检测');
+
+// Test 27: 证伪里出现"需谨慎观察" → warn
+eq(AuditRules.auditTrade({ ...tLong, falsification: '跌破60900后需谨慎观察' }, 10000).verdict, 'warn', '软话术需谨慎 → warn');
+
+// Test 28: 离场里出现"酌情" → warn
+eq(AuditRules.auditTrade({ ...tLong, exit_strategy: '60400止损全平；62900卖半；64900清仓，注意风险酌情减仓' }, 10000).verdict, 'warn', '软话术酌情 → warn');
+
+// Test 29: 空头反驳里出现"风险与机会并存" → warn 且检出条目
+const softR = AuditRules.auditTrade({ ...tLong, bear_case: '1) 风险与机会并存 2) 边走边看 3) 再看吧' }, 10000);
+eq(softR.verdict, 'warn', '软话术并存 → warn');
+ok(softR.checks.some(c => c.text.includes('软话术')), '检出软话术条目');
+
+// Test 30: 无软话术 → 保持 pass（基础单不误伤）
+eq(AuditRules.auditTrade(tLong, 10000).verdict, 'pass', '无软话术 → pass');
+ok(AuditRules.auditTrade(tLong, 10000).checks.some(c => c.text.includes('结论硬约束') && c.text.startsWith('✅')), '硬约束通过条目存在');
+
 // ===== 汇总 =====
 const total = passed + failed;
 console.log(`\n${'='.repeat(50)}`);
