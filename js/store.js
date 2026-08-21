@@ -265,6 +265,16 @@ const Store = {
         }
         break;
       }
+      case 'UPDATE_TRACKER': {
+        const {id, patch} = payload;
+        const item = s.tracker.find(t => t.id === id);
+        if (item) {
+          Object.assign(item, patch);
+          this._save(s.currentLane + '_tracker', s.tracker);
+          this._notify('tracker');
+        }
+        break;
+      }
       case 'CLEAR_TRACKER': {
         s.tracker = [];
         this._save(s.currentLane + '_tracker', []);

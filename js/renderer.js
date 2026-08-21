@@ -689,6 +689,10 @@ const Renderer = {
     const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
     const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
     const profitFactor = avgLoss > 0 && wins.length > 0 ? (wins.length * avgWin) / (losses.length * avgLoss) : 0;
+    const ev = closed.length > 0 ? totalPnl / closed.length : 0;
+    const realRR = avgLoss > 0 && wins.length > 0 ? avgWin / avgLoss : 0;
+    const claimedClosed = closed.filter(t => t.claimed_rr && parseFloat(t.claimed_rr) > 0);
+    const claimedAvg = claimedClosed.length > 0 ? claimedClosed.reduce((s, t) => s + parseFloat(t.claimed_rr), 0) / claimedClosed.length : 0;
 
     let html = '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">';
     html += '<div class="stat-card"><div class="label">总追踪</div><div class="value blue">' + tracker.length + '</div></div>';
@@ -696,9 +700,13 @@ const Renderer = {
     html += '<div class="stat-card"><div class="label">胜率</div><div class="value ' + (winRate >= 50 ? 'green' : 'red') + '">' + (closed.length ? winRate.toFixed(0) + '%' : '—') + '</div></div>';
     html += '<div class="stat-card"><div class="label">累计盈亏</div><div class="value ' + (totalPnl >= 0 ? 'green' : 'red') + '">' + (closed.length ? (totalPnl >= 0 ? '+' : '') + totalPnl.toFixed(0) + ' 元' : '—') + '</div></div>';
     html += '<div class="stat-card"><div class="label">盈亏因子</div><div class="value ' + (profitFactor >= 1 ? 'green' : 'red') + '">' + (profitFactor ? profitFactor.toFixed(2) : '—') + '</div></div>';
+    html += '<div class="stat-card"><div class="label">期望值</div><div class="value ' + (ev >= 0 ? 'green' : 'red') + '">' + (closed.length ? (ev >= 0 ? '+' : '') + ev.toFixed(0) + ' 元' : '—') + '</div></div>';
+    html += '<div class="stat-card"><div class="label">真实盈亏比</div><div class="value ' + (realRR >= 2 ? 'green' : (realRR > 0 ? 'red' : 'blue')) + '">' + (realRR ? realRR.toFixed(2) + ':1' : '—') + '</div></div>';
     html += '</div>';
 
-    html += '<div style="font-size:10px;color:#64748B;margin-bottom:8px">已平仓 ' + closed.length + ' 笔 · 盈 ' + wins.length + ' / 亏 ' + losses.length + ' · 样本不足 30 笔时胜率仅供参考</div>';
+    html += '<div style="font-size:10px;color:#64748B;margin-bottom:8px">已平仓 ' + closed.length + ' 笔 · 盈 ' + wins.length + ' / 亏 ' + losses.length + ' · 样本不足 30 笔时统计仅供参考'
+      + (claimedAvg > 0 ? ' · 模型自报 RR 均值 ' + claimedAvg.toFixed(2) + ':1 vs 实际盈亏比 ' + (realRR ? realRR.toFixed(2) + ':1' : '—') + '（金额口径，仅供参考）' : '')
+      + '</div>';
     html += '<div style="display:flex;flex-direction:column;gap:10px">';
     tracker.forEach((t, i) => {
       const direction = t.direction === 'long' ? '做多' : '做空';
@@ -709,16 +717,20 @@ const Renderer = {
       const now = new Date();
       const trackedDate = new Date(t.tracked_at);
       const hoursSince = Math.floor((now - trackedDate) / (1000 * 60 * 60));
-      const closedTag = t.result ? (t.pnl >= 0
-        ? '<span style="font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(34,197,94,.12);color:#22C55E;font-weight:700">✅ ' + (t.result === 'tp1' ? '止盈1' : t.result === 'tp2' ? '止盈2' : '手动离场') + ' +' + t.pnl.toFixed(0) + '元</span>'
-        : '<span style="font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(239,68,68,.12);color:#EF4444;font-weight:700">🔴 ' + (t.result === 'sl' ? '止损' : '手动离场') + ' ' + t.pnl.toFixed(0) + '元</span>')
-        : '';
+      const closedTag = t.result === 'half'
+        ? '<span style="font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(210,153,34,.12);color:#d29922;font-weight:700">⏳ 半仓止盈1 ' + (t.pnl || 0).toFixed(0) + '元</span>'
+        : (t.result ? (t.pnl >= 0
+          ? '<span style="font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(34,197,94,.12);color:#22C55E;font-weight:700">✅ ' + (t.result === 'tp1' ? '止盈1' : t.result === 'tp2' ? '止盈2' : '手动离场') + ' +' + t.pnl.toFixed(0) + '元</span>'
+          : '<span style="font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(239,68,68,.12);color:#EF4444;font-weight:700">🔴 ' + (t.result === 'sl' ? '止损' : '手动离场') + ' ' + t.pnl.toFixed(0) + '元</span>')
+          : '');
+      const autoTag = t.auto ? '<span style="font-size:9px;color:#64748B;margin-right:6px">🤖 自动' + (t.exit_price ? ' @$' + t.exit_price.toLocaleString() : '') + '</span>' : '';
 
       html += '<div class="trade-card pass" style="padding:10px 14px">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
       html += '<div><span style="font-size:16px;font-weight:700">' + this.esc(t.symbol) + '</span>';
       html += '<span class="trade-direction ' + t.direction + '" style="margin-left:8px">' + direction + '</span></div>';
       html += '<div style="display:flex;align-items:center;gap:6px">';
+      html += autoTag;
       html += closedTag;
       html += '<span style="font-size:10px;color:#64748B">已追踪 ' + hoursSince + 'h</span>';
       html += '<button class="btn btn-secondary" data-action="removeTracker" data-idx="' + i + '" style="font-size:9px;padding:2px 6px;color:var(--red);border-color:var(--red)">✕ 移除</button>';
@@ -728,10 +740,20 @@ const Renderer = {
       html += '<div><div class="trade-detail-label">目标 1 / 2</div><div class="trade-detail-value">' + t1 + ' / ' + t2 + '</div></div>';
       html += '<div><div class="trade-detail-label">盈亏比</div><div class="trade-detail-value">' + (t.claimed_rr || '—') + ':1</div></div>';
       html += '</div>';
-      if (!t.result) {
+      if (!t.result || t.result === 'half') {
         html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(148,163,184,.1);display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
-        html += '<span style="font-size:9px;color:#64748B">记录结果：</span>';
-        html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="tp1" style="font-size:9px;padding:2px 8px;color:#22C55E;border-color:rgba(34,197,94,.3)">✅ 止盈1</button>';
+        html += '<span style="font-size:9px;color:#64748B">' + (t.result === 'half' ? '判定剩余半仓（目标2/止损）：' : '录入现价自动判定：') + '</span>';
+        html += '<input id="pxInput-' + i + '" type="number" step="any" placeholder="当前价" value="' + (t.last_price || '') + '" style="width:90px;background:#0d1117;border:1px solid rgba(148,163,184,.25);border-radius:6px;color:#e6edf3;font-size:11px;padding:4px 8px">';
+        html += '<button class="btn btn-secondary" data-action="verifyPrice" data-idx="' + i + '" style="font-size:9px;padding:2px 8px;color:#58a6ff;border-color:rgba(88,166,255,.3)">📊 判定</button>';
+        if (t.last_price && t.stop) {
+          const isL = (t.direction === 'long' || t.direction === 'buy');
+          const stopDist = (isL ? (t.last_price - t.stop) : (t.stop - t.last_price)) / t.last_price * 100;
+          const far = t.result === 'half' ? (t.target2 || t.target1) : t.target1;
+          const farDist = far ? (isL ? (far - t.last_price) : (t.last_price - far)) / t.last_price * 100 : null;
+          html += '<span style="font-size:9px;color:#64748B">距止损 ' + stopDist.toFixed(1) + '%' + (farDist !== null ? ' · 距' + (t.result === 'half' ? '目标2' : '目标1') + ' ' + farDist.toFixed(1) + '%' : '') + '</span>';
+        }
+        html += '<span style="font-size:9px;color:#64748B;margin-left:auto">或手动：</span>';
+        if (t.result !== 'half') html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="tp1" style="font-size:9px;padding:2px 8px;color:#22C55E;border-color:rgba(34,197,94,.3)">✅ 止盈1</button>';
         html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="tp2" style="font-size:9px;padding:2px 8px;color:#22C55E;border-color:rgba(34,197,94,.3)">🎯 止盈2</button>';
         html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="sl" style="font-size:9px;padding:2px 8px;color:#EF4444;border-color:rgba(239,68,68,.3)">🔴 止损</button>';
         html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="manual" style="font-size:9px;padding:2px 8px;color:#d29922;border-color:rgba(210,153,34,.3)">✋ 手动离场</button>';

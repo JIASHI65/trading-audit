@@ -616,10 +616,53 @@ const App = {
             target1: t.target1,
             target2: t.target2,
             claimed_rr: t.claimed_rr,
+            size_cny: t.size_cny,
             tracked_at: new Date().toISOString()
           });
         }
         this.refreshUI();
+        break;
+      }
+
+      // ----- 录入现价：自动判定持仓状态（信号后验） -----
+      case 'verifyPrice': {
+        const idxV = parseInt(ctx.idx);
+        const item = s.tracker[idxV];
+        if (!item) break;
+        if (item.result && item.result !== 'half') break;
+        const input = document.getElementById('pxInput-' + idxV);
+        const price = parseFloat(input && input.value);
+        if (!price || price <= 0) { alert('请输入有效的当前价'); break; }
+        const priceLog = Array.isArray(item.price_log) ? item.price_log : [];
+        priceLog.push({price, at: new Date().toISOString()});
+
+        const sim = SignalVerifier.simulate(item, priceLog.map(p => p.price));
+        if (sim.result === 'holding') {
+          Store.dispatch('UPDATE_TRACKER', {id: item.id, patch: {
+            price_log: priceLog,
+            last_price: price,
+            half_tp1: sim.half_tp1
+          }});
+        } else if (sim.result === 'half') {
+          // 半仓止盈1，剩半仓在途：只累计已结算部分，结果不算平仓
+          Store.dispatch('UPDATE_TRACKER', {id: item.id, patch: {
+            price_log: priceLog,
+            last_price: price,
+            result: 'half',
+            pnl: sim.pnl,
+            exit_price: sim.exit_price,
+            auto: true
+          }});
+        } else {
+          // sl / tp2：全结
+          Store.dispatch('SET_TRACKER_RESULT', {id: item.id, result: sim.result, pnl: sim.pnl});
+          Store.dispatch('UPDATE_TRACKER', {id: item.id, patch: {
+            price_log: priceLog,
+            exit_price: sim.exit_price,
+            auto: true
+          }});
+        }
+        Renderer.renderTracker();
         break;
       }
 
