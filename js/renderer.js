@@ -754,6 +754,46 @@ const Renderer = {
   // ============================================================
   // 学习看板渲染
   // ============================================================
+  renderAuditChain() {
+    const panel = document.getElementById('auditChainPanel');
+    if (!panel) return;
+    const records = Store.state.auditChain || [];
+    const v = AuditChain.verify(records);
+    const sum = AuditChain.summary(records);
+
+    if (records.length === 0) {
+      panel.innerHTML =
+        '<div style="padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface);display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-size:11px;color:var(--text-dim)">🔗 审计日志链</span>' +
+        '<span style="font-size:10px;color:#64748B">暂无记录（每次「开始审计」自动入链）</span></div>';
+      return;
+    }
+
+    const statusHtml = v.ok
+      ? '<span style="font-size:10px;padding:3px 10px;border-radius:999px;background:rgba(34,197,94,.12);color:#22C55E;font-weight:700">✅ 链完整 ' + sum.length + ' 笔</span>'
+      : '<span style="font-size:10px;padding:3px 10px;border-radius:999px;background:rgba(239,68,68,.12);color:#EF4444;font-weight:700">🚨 检测到篡改！第 ' + (v.brokenAt + 1) + ' 笔</span>';
+
+    let rows = '';
+    records.slice(-8).reverse().forEach(r => {
+      const time = r.ts ? r.ts.slice(0, 19).replace('T', ' ') : '';
+      rows += '<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid rgba(148,163,184,.06);font-size:10px">' +
+        '<span style="color:#94A3B8">' + time + '</span>' +
+        '<span style="color:#d29922">' + this.esc(r.model) + '</span>' +
+        '<span style="color:#94A3B8;flex:1;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + this.esc(r.summary || '') + '</span>' +
+        '<span style="color:#64748B;font-family:monospace">' + r.hash + '</span></div>';
+    });
+
+    panel.innerHTML =
+      '<div style="border:1px solid ' + (v.ok ? 'var(--border)' : 'rgba(239,68,68,.4)') + ';border-radius:8px;background:var(--surface);padding:10px 14px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+      '<span style="font-size:11px;font-weight:700">🔗 审计日志链 <span style="font-size:9px;color:#64748B;font-weight:400">防篡改 · hash 互链</span></span>' +
+      '<div style="display:flex;align-items:center;gap:6px">' + statusHtml +
+      '<button class="btn btn-secondary" data-action="clearAuditChain" style="font-size:9px;padding:2px 6px;color:var(--red);border-color:var(--red)">清空</button></div></div>' +
+      '<div style="font-size:9px;color:#64748B;margin-bottom:4px">最新 ' + (sum.latestHash || '—') + '</div>' +
+      rows +
+      '</div>';
+  },
+
   mdRender(text) {
     if (!text || !text.trim()) return '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">暂无内容</div>';
 

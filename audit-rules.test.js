@@ -135,6 +135,42 @@ const p0 = AuditRules.calcPersonality([]);
 eq(p0.avgRR, 0, '空数组avgRR=0');
 eq(p0.totalRiskScore, 0, '空数组totalRiskScore=0');
 
+// ===== AuditChain 日志链 =====
+console.log('\n🔗 AuditChain');
+const chainCode = fs.readFileSync('core/audit-chain.js', 'utf-8');
+const AuditChain = new Function(chainCode + '; return AuditChain;')();
+
+// Test 21: 空链校验通过
+eq(AuditChain.verify([]).ok, true, '空链 ok');
+
+// Test 22: 追加两笔后链完整
+const recs = [];
+recs.push(AuditChain.append(recs, {model:'claude', content: JSON.stringify({symbol:'BTC', dir:'long'}), summary:'BTC long'}));
+recs.push(AuditChain.append(recs, {model:'gpt', content: JSON.stringify({symbol:'ETH', dir:'short'}), summary:'ETH short'}));
+eq(AuditChain.verify(recs).ok, true, '两笔链完整');
+eq(recs[1].prevHash, recs[0].hash, '第二笔 prevHash = 第一笔 hash');
+
+// Test 23: 篡改第二笔内容 → 校验断裂
+const tampered = JSON.parse(JSON.stringify(recs));
+tampered[1].content = '{"symbol":"ETH","dir":"long"}';  // 改方向
+eq(AuditChain.verify(tampered).ok, false, '篡改内容 → 断裂');
+
+// Test 24: 篡改第一笔 hash → 第二笔 prevHash 失配
+const tampered2 = JSON.parse(JSON.stringify(recs));
+tampered2[0].hash = 'deadbeef';
+const v2 = AuditChain.verify(tampered2);
+eq(v2.ok, false, '伪造第一笔 hash → 断裂');
+eq(v2.brokenAt, 0, '断裂点在第 1 笔（自身 hash 失配）');
+
+// Test 25: 删除中间一笔 → prevHash 链断
+const tampered3 = JSON.parse(JSON.stringify(recs));
+tampered3.splice(0, 1);
+eq(AuditChain.verify(tampered3).ok, false, '删除中间笔 → 断裂');
+
+// Test 26: summary
+eq(AuditChain.summary(recs).length, 2, 'summary 长度');
+eq(AuditChain.summary(recs).latestHash, recs[1].hash, 'summary 最新 hash');
+
 // ===== 汇总 =====
 const total = passed + failed;
 console.log(`\n${'='.repeat(50)}`);

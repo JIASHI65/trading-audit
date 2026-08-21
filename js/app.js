@@ -535,6 +535,7 @@ const App = {
 
           // [FIX Bug 4] 切换到追踪账本时自动刷新
           if (ctx.tab === 'tracker') {
+            Renderer.renderAuditChain();
             Renderer.renderTracker();
           }
           if (ctx.tab === 'audit') {
@@ -616,6 +617,15 @@ const App = {
         if (confirm('确定清空所有追踪交易吗？')) {
           Store.dispatch('CLEAR_TRACKER');
           Renderer.renderTracker();
+        }
+        break;
+      }
+
+      // ----- 清空审计链 -----
+      case 'clearAuditChain': {
+        if (confirm('确定清空审计日志链吗？此操作会删除全部防篡改记录。')) {
+          Store.dispatch('CLEAR_AUDIT_CHAIN');
+          Renderer.renderAuditChain();
         }
         break;
       }

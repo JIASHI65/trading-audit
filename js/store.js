@@ -19,11 +19,12 @@ const Store = {
     pendingSnapshotTimer: null,
     pendingTrackerTimer: null,
     subscribers: [],           // [{key, fn}]
-    prompts: {}              // {lane: [{version, date, content}]}
+    prompts: {},               // {lane: [{version, date, content}]}
+    auditChain: []             // 审计日志链 [{ts, model, action, content, contentHash, prevHash, hash, summary}]
   },
 
   _prefix: 'app_',
-  _storageKeys: ['confirms', 'models', 'tracker', 'selected'],
+  _storageKeys: ['confirms', 'models', 'tracker', 'selected', 'audit_chain'],
 
   _save(key, val) {
     try { localStorage.setItem(this._prefix + key, JSON.stringify(val)); } catch(e) {}
@@ -118,6 +119,19 @@ const Store = {
         s.models[id] = {input, data, time: ts, version: ver, generated_at: gen};
         this._save(s.currentLane + '_models', s.models);
         this._notify('models');
+        // 追加审计日志链（防篡改）
+        try {
+          const content = AuditChain.serialize(data && data.trades, {model: id, version: ver, lane: s.currentLane});
+          const record = AuditChain.append(s.auditChain, {
+            model: id,
+            action: 'audit',
+            content: content,
+            summary: (data && data.trades ? data.trades.length : 0) + ' 笔 | ' + (data && data._meta ? data._meta.version : '') + ' | ' + id
+          });
+          s.auditChain.push(record);
+          this._save(s.currentLane + '_audit_chain', s.auditChain);
+          this._notify('auditChain');
+        } catch(e) {}
         break;
       }
       case 'CLEAR_MODEL': {
@@ -208,6 +222,12 @@ const Store = {
         this._notify('tracker');
         break;
       }
+      case 'CLEAR_AUDIT_CHAIN': {
+        s.auditChain = [];
+        this._save(s.currentLane + '_audit_chain', []);
+        this._notify('auditChain');
+        break;
+      }
       case 'SET_SNAPSHOT': {
         s.snapshot = payload;
         this._notify('snapshot');
@@ -232,6 +252,7 @@ const Store = {
     this.state.models = this._load(lane + '_models', {});
     this.state.confirms = this._load(lane + '_confirms', {});
     this.state.tracker = this._load(lane + '_tracker', []);
+    this.state.auditChain = this._load(lane + '_audit_chain', []);
     const sel = this._load(this.state.currentLane + '_selected', []);
     this.state.selected = new Set(sel);
     try {
@@ -295,6 +316,7 @@ const Store = {
     this.state.models = this._load(lane + '_models', {});
     this.state.confirms = this._load(lane + '_confirms', {});
     this.state.tracker = this._load(lane + '_tracker', []);
+    this.state.auditChain = this._load(lane + '_audit_chain', []);
     const sel = this._load(lane + '_selected', []);
     this.state.selected = new Set(sel);
     this.state.filter = 'all';
