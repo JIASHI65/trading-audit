@@ -343,6 +343,31 @@ const App = {
         if (sec) sec.scrollIntoView({behavior:'smooth', block:'start'});
       });
     }
+    // 备份文件导入
+    const backupInput = document.getElementById('backupFileInput');
+    if (backupInput) {
+      backupInput.addEventListener('change', function(e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          try {
+            const data = JSON.parse(ev.target.result);
+            const result = Store.importAll(data);
+            if (!result.ok) { alert('❌ ' + result.reason); return; }
+            // 重新加载当前赛道状态
+            Store.init();
+            App.restoreUI();
+            App._syncLaneUI();
+            alert('✅ 备份恢复成功！已重新加载数据。');
+          } catch(err) {
+            alert('❌ 备份文件解析失败：' + err.message);
+          }
+        };
+        reader.readAsText(file);
+        backupInput.value = '';
+      });
+    }
     // 选中复选框的委托
     document.getElementById('app').addEventListener('change', (e) => {
       if (e.target.classList.contains('trade-select')) {
@@ -373,6 +398,20 @@ const App = {
     // 初始化 UI
     this.restoreUI();
     this._syncLaneUI();
+
+    // 备份提醒（超过 30 天未备份时提示一次）
+    try {
+      const last = Store.lastBackupAt();
+      if (last) {
+        const days = Math.floor((Date.now() - last.getTime()) / (1000 * 60 * 60 * 24));
+        if (days >= 30 && !sessionStorage.getItem('backup_reminded')) {
+          sessionStorage.setItem('backup_reminded', '1');
+          setTimeout(() => {
+            alert('💾 距离上次备份已 ' + days + ' 天\n建议点右上角「备份」导出一份，防止浏览器清缓存丢失数据。\n（30 天提醒一次，不想备份可忽略）');
+          }, 800);
+        }
+      }
+    } catch(e) {}
 
     // 加载行情
     await Snapshot.loadMarketSnapshot();
@@ -627,6 +666,31 @@ const App = {
           Store.dispatch('CLEAR_AUDIT_CHAIN');
           Renderer.renderAuditChain();
         }
+        break;
+      }
+
+      // ----- 导出备份 -----
+      case 'backupNow': {
+        const data = Store.exportAll();
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const d = new Date();
+        const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        a.download = '审计台备份_' + dateStr + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        Store.markBackupNow();
+        alert('✅ 备份已导出：审计台备份_' + dateStr + '.json\n（含 4 个赛道 + 提示词 + 审计链）');
+        break;
+      }
+
+      // ----- 导入恢复 -----
+      case 'restoreBackup': {
+        document.getElementById('backupFileInput').click();
         break;
       }
 

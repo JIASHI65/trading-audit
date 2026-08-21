@@ -33,6 +33,55 @@ const Store = {
     try { const d = localStorage.getItem(this._prefix + key); return d ? JSON.parse(d) : def; } catch(e) { return def; }
   },
 
+  // ---------- 备份/恢复（全赛道导出） ----------
+  exportAll() {
+    const LANES = ['stream_us', 'stream_a', 'stream_hk', 'stream_crypto'];
+    const lanes = {};
+    LANES.forEach(lane => {
+      lanes[lane] = {
+        models: this._load(lane + '_models', {}),
+        confirms: this._load(lane + '_confirms', {}),
+        tracker: this._load(lane + '_tracker', []),
+        auditChain: this._load(lane + '_audit_chain', [])
+      };
+    });
+    let prompts = {};
+    try { prompts = JSON.parse(localStorage.getItem('app_prompts')) || {}; } catch(e) {}
+    return {
+      _format: 'audit-station-backup',
+      _version: 1,
+      _exported_at: new Date().toISOString(),
+      lanes: lanes,
+      prompts: prompts
+    };
+  },
+
+  importAll(data) {
+    if (!data || data._format !== 'audit-station-backup') return {ok: false, reason: '不是有效的审计台备份文件'};
+    const LANES = ['stream_us', 'stream_a', 'stream_hk', 'stream_crypto'];
+    LANES.forEach(lane => {
+      const l = data.lanes && data.lanes[lane];
+      if (!l) return;
+      if (l.models) this._save(lane + '_models', l.models);
+      if (l.confirms) this._save(lane + '_confirms', l.confirms);
+      if (l.tracker) this._save(lane + '_tracker', l.tracker);
+      if (l.auditChain) this._save(lane + '_audit_chain', l.auditChain);
+    });
+    if (data.prompts) {
+      try { localStorage.setItem('app_prompts', JSON.stringify(data.prompts)); } catch(e) {}
+    }
+    return {ok: true};
+  },
+
+  lastBackupAt() {
+    const v = this._load('last_backup', '');
+    return v ? new Date(v) : null;
+  },
+
+  markBackupNow() {
+    this._save('last_backup', new Date().toISOString());
+  },
+
   // 从旧版 localStorage 迁移
   _migrateOldKeys() {
     const migrated = {confirms:{}, models:{}, tracker:[]};
