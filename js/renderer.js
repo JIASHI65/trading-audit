@@ -680,29 +680,71 @@ const Renderer = {
       return;
     }
 
-    let html = '<div style="display:flex;flex-direction:column;gap:10px">';
+    // ---------- 回测统计 ----------
+    const closed = tracker.filter(t => t.result);
+    const wins = closed.filter(t => t.pnl > 0);
+    const losses = closed.filter(t => t.pnl < 0);
+    const totalPnl = closed.reduce((s, t) => s + (t.pnl || 0), 0);
+    const winRate = closed.length > 0 ? (wins.length / closed.length * 100) : 0;
+    const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0;
+    const profitFactor = avgLoss > 0 && wins.length > 0 ? (wins.length * avgWin) / (losses.length * avgLoss) : 0;
+
+    let html = '<div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:14px">';
+    html += '<div class="stat-card"><div class="label">总追踪</div><div class="value blue">' + tracker.length + '</div></div>';
+    html += '<div class="stat-card"><div class="label">已平仓</div><div class="value blue">' + closed.length + '</div></div>';
+    html += '<div class="stat-card"><div class="label">胜率</div><div class="value ' + (winRate >= 50 ? 'green' : 'red') + '">' + (closed.length ? winRate.toFixed(0) + '%' : '—') + '</div></div>';
+    html += '<div class="stat-card"><div class="label">累计盈亏</div><div class="value ' + (totalPnl >= 0 ? 'green' : 'red') + '">' + (closed.length ? (totalPnl >= 0 ? '+' : '') + totalPnl.toFixed(0) + ' 元' : '—') + '</div></div>';
+    html += '<div class="stat-card"><div class="label">盈亏因子</div><div class="value ' + (profitFactor >= 1 ? 'green' : 'red') + '">' + (profitFactor ? profitFactor.toFixed(2) : '—') + '</div></div>';
+    html += '</div>';
+
+    html += '<div style="font-size:10px;color:#64748B;margin-bottom:8px">已平仓 ' + closed.length + ' 笔 · 盈 ' + wins.length + ' / 亏 ' + losses.length + ' · 样本不足 30 笔时胜率仅供参考</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:10px">';
     tracker.forEach((t, i) => {
       const direction = t.direction === 'long' ? '做多' : '做空';
       const entry = '$' + (t.entry_low || 0).toLocaleString() + ' – $' + (t.entry_high || 0).toLocaleString();
       const stop = '$' + (t.stop || 0).toLocaleString();
       const t1 = t.target1 ? '$' + t.target1.toLocaleString() : '—';
+      const t2 = t.target2 ? '$' + t.target2.toLocaleString() : '—';
       const now = new Date();
       const trackedDate = new Date(t.tracked_at);
       const hoursSince = Math.floor((now - trackedDate) / (1000 * 60 * 60));
+      const closedTag = t.result ? (t.pnl >= 0
+        ? '<span style="font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(34,197,94,.12);color:#22C55E;font-weight:700">✅ ' + (t.result === 'tp1' ? '止盈1' : t.result === 'tp2' ? '止盈2' : '手动离场') + ' +' + t.pnl.toFixed(0) + '元</span>'
+        : '<span style="font-size:9px;padding:2px 8px;border-radius:999px;background:rgba(239,68,68,.12);color:#EF4444;font-weight:700">🔴 ' + (t.result === 'sl' ? '止损' : '手动离场') + ' ' + t.pnl.toFixed(0) + '元</span>')
+        : '';
 
       html += '<div class="trade-card pass" style="padding:10px 14px">';
       html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
       html += '<div><span style="font-size:16px;font-weight:700">' + this.esc(t.symbol) + '</span>';
       html += '<span class="trade-direction ' + t.direction + '" style="margin-left:8px">' + direction + '</span></div>';
       html += '<div style="display:flex;align-items:center;gap:6px">';
+      html += closedTag;
       html += '<span style="font-size:10px;color:#64748B">已追踪 ' + hoursSince + 'h</span>';
       html += '<button class="btn btn-secondary" data-action="removeTracker" data-idx="' + i + '" style="font-size:9px;padding:2px 6px;color:var(--red);border-color:var(--red)">✕ 移除</button>';
       html += '</div></div><div class="trade-details">';
       html += '<div><div class="trade-detail-label">入场区间</div><div class="trade-detail-value">' + entry + '</div></div>';
       html += '<div><div class="trade-detail-label">止损</div><div class="trade-detail-value">' + stop + '</div></div>';
-      html += '<div><div class="trade-detail-label">目标 1</div><div class="trade-detail-value">' + t1 + '</div></div>';
+      html += '<div><div class="trade-detail-label">目标 1 / 2</div><div class="trade-detail-value">' + t1 + ' / ' + t2 + '</div></div>';
       html += '<div><div class="trade-detail-label">盈亏比</div><div class="trade-detail-value">' + (t.claimed_rr || '—') + ':1</div></div>';
-      html += '</div></div>';
+      html += '</div>';
+      if (!t.result) {
+        html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(148,163,184,.1);display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
+        html += '<span style="font-size:9px;color:#64748B">记录结果：</span>';
+        html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="tp1" style="font-size:9px;padding:2px 8px;color:#22C55E;border-color:rgba(34,197,94,.3)">✅ 止盈1</button>';
+        html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="tp2" style="font-size:9px;padding:2px 8px;color:#22C55E;border-color:rgba(34,197,94,.3)">🎯 止盈2</button>';
+        html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="sl" style="font-size:9px;padding:2px 8px;color:#EF4444;border-color:rgba(239,68,68,.3)">🔴 止损</button>';
+        html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="manual" style="font-size:9px;padding:2px 8px;color:#d29922;border-color:rgba(210,153,34,.3)">✋ 手动离场</button>';
+        html += '</div>';
+      } else if (t.result === 'manual') {
+        html += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(148,163,184,.1);display:flex;align-items:center;gap:6px">';
+        html += '<span style="font-size:9px;color:#64748B">手动离场可重新记录：</span>';
+        html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="tp1" style="font-size:9px;padding:2px 8px;color:#22C55E">✅ 止盈1</button>';
+        html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="tp2" style="font-size:9px;padding:2px 8px;color:#22C55E">🎯 止盈2</button>';
+        html += '<button class="btn btn-secondary" data-action="setTrackerResult" data-idx="' + i + '" data-result="sl" style="font-size:9px;padding:2px 8px;color:#EF4444">🔴 止损</button>';
+        html += '</div>';
+      }
+      html += '</div>';
     });
     html += '</div>';
     html += '<div style="margin-top:16px;text-align:center"><button class="btn btn-secondary" data-action="clearTracker" style="font-size:11px;color:var(--red);border-color:var(--red)">🗑️ 清空所有追踪</button></div>';

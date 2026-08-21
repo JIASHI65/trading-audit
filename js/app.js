@@ -594,6 +594,23 @@ const App = {
         break;
       }
 
+      // ----- 记录平仓结果 -----
+      case 'setTrackerResult': {
+        const idx5 = parseInt(ctx.idx);
+        const item = s.tracker[idx5];
+        const result = ctx.target.dataset.result;
+        if (!item) break;
+        const resultLabel = {tp1:'止盈1', tp2:'止盈2', sl:'止损', manual:'手动离场'}[result] || result;
+        const input = prompt('记录「' + item.symbol + '」' + resultLabel + '的盈亏金额（元）：\n正数=盈利，负数=亏损，0=平手', '0');
+        if (input === null) break;
+        if (String(input).trim() === '') { alert('请输入盈亏金额'); break; }
+        const pnl = parseFloat(input);
+        if (isNaN(pnl)) { alert('请输入数字'); break; }
+        Store.dispatch('SET_TRACKER_RESULT', {id: item.id, result, pnl});
+        Renderer.renderTracker();
+        break;
+      }
+
       // ----- 清空追踪 -----
       case 'clearTracker': {
         if (confirm('确定清空所有追踪交易吗？')) {

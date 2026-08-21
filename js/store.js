@@ -190,6 +190,18 @@ const Store = {
         this._notify('tracker');
         break;
       }
+      case 'SET_TRACKER_RESULT': {
+        const {id, result, pnl} = payload;
+        const item = s.tracker.find(t => t.id === id);
+        if (item) {
+          item.result = result;
+          item.pnl = parseFloat(pnl) || 0;
+          item.closed_at = new Date().toISOString();
+          this._save(s.currentLane + '_tracker', s.tracker);
+          this._notify('tracker');
+        }
+        break;
+      }
       case 'CLEAR_TRACKER': {
         s.tracker = [];
         this._save(s.currentLane + '_tracker', []);
@@ -327,4 +339,3 @@ const Store = {
     return this.state.prompts[lane] || [];
   }
 };
-
